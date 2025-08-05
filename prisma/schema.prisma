@@ -1,0 +1,29 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Log {
+  id          Int      @id @default(autoincrement())
+  partNumber  String   @unique
+  startTime   String
+  endTime     String
+  ct          String
+  standard    String
+  limitHigh   Int
+  limitLow    Int
+  created_at  DateTime @default(now())
+}
+
+model Thresholds {
+  id          Int      @id @default(autoincrement())
+  partNumber  String   @unique
+  standard    String
+  limitHigh   Int
+  limitLow    Int
+  created_at  DateTime @default(now())
+}
