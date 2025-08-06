@@ -1,16 +1,43 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma'; // ปรับ path ตามโครงสร้างโปรเจกต์
+import { NextRequest, NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
 
-export async function GET() {
-  const thresholds = await prisma.thresholds.findMany();
-  return NextResponse.json(thresholds);
+const prisma = new PrismaClient();
+
+// GET all thresholds
+export async function GET(request: NextRequest) {
+  try {
+    const thresholds = await prisma.thresholds.findMany({
+      orderBy: { created_at: "desc" },
+    });
+    return NextResponse.json(thresholds);
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to fetch thresholds" },
+      { status: 500 }
+    );
+  }
 }
 
+// POST create new threshold (เหมือนโค้ดที่ส่งมา)
 export async function POST(request: NextRequest) {
   const data = await request.json();
+
   const { partNumber, standard, limitHigh, limitLow } = data;
+
+  if (
+    !partNumber ||
+    !standard ||
+    typeof limitHigh !== "number" ||
+    typeof limitLow !== "number"
+  ) {
+    return NextResponse.json(
+      { error: "Missing or invalid fields" },
+      { status: 400 }
+    );
+  }
+
   try {
-    const newThreshold = await prisma.thresholds.create({
+    const threshold = await prisma.thresholds.create({
       data: {
         partNumber,
         standard,
@@ -18,33 +45,17 @@ export async function POST(request: NextRequest) {
         limitLow,
       },
     });
-    return NextResponse.json(newThreshold);
-  } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
-  }
-}
-
-export async function PUT(request: NextRequest) {
-  const data = await request.json();
-  const { id, partNumber, standard, limitHigh, limitLow } = data;
-  try {
-    const updated = await prisma.thresholds.update({
-      where: { id },
-      data: { partNumber, standard, limitHigh, limitLow },
-    });
-    return NextResponse.json(updated);
-  } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
-  }
-}
-
-export async function DELETE(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const id = Number(searchParams.get('id'));
-  try {
-    await prisma.thresholds.delete({ where: { id } });
-    return NextResponse.json({ message: 'Deleted successfully' });
-  } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json(threshold, { status: 201 });
+  } catch (error: any) {
+    if (
+      error.code === "P2002" &&
+      error.meta?.target?.includes("partNumber")
+    ) {
+      return NextResponse.json(
+        { error: "Part Number must be unique" },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
 }

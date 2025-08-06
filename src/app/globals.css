@@ -19,3 +19,17 @@
 body {
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.custom-scrollbar::-webkit-scrollbar {
+  height: 4px;
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #075985; /* sky-800 */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #38bdf8; /* sky-400 */
+  border-radius: 10px;
+}
