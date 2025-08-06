@@ -23,7 +23,7 @@ export default function Home() {
             onClick={() => setOpen(true)}
             className="bg-green-600 px-4 py-2 rounded text-white"
           >
-            <Notebook />
+          <div className="flex"><Notebook /> SETTING THRESHOLD</div>
           </button>
 
           <ThresholdModal isOpen={open} onClose={() => setOpen(false)} />
