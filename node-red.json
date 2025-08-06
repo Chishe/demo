@@ -1,0 +1,870 @@
+[
+    {
+        "id": "721ba432f07e8704",
+        "type": "tab",
+        "label": "RECORD",
+        "disabled": true,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "986bddfb5ede2094",
+        "type": "inject",
+        "z": "721ba432f07e8704",
+        "name": "Start",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "1",
+        "payloadType": "num",
+        "x": 130,
+        "y": 120,
+        "wires": [
+            [
+                "cea7092f3e5f114f"
+            ]
+        ]
+    },
+    {
+        "id": "7c0c0e645306cce0",
+        "type": "inject",
+        "z": "721ba432f07e8704",
+        "name": "Stop",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0",
+        "payloadType": "num",
+        "x": 130,
+        "y": 200,
+        "wires": [
+            [
+                "cea7092f3e5f114f"
+            ]
+        ]
+    },
+    {
+        "id": "5a1d1b881956d874",
+        "type": "function",
+        "z": "721ba432f07e8704",
+        "name": "Save Start Time",
+        "func": "const now = new Date();\n\n\nconst timeZone = 'Asia/Bangkok';\nconst dateStr = now.toLocaleDateString(\"sv-SE\", { timeZone });\nconst timeStr = now.toLocaleTimeString(\"en-GB\", { timeZone });\nflow.set(\"start_time\", timeStr);\nconst filename = `video_${dateStr}.mp4`;\nflow.set(\"current_filename\", filename);\n\nmsg.filename = filename;\nmsg.payload = { dateStr, timeStr, filename };\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 660,
+        "y": 120,
+        "wires": [
+            [
+                "start-stop-ffmpeg"
+            ]
+        ]
+    },
+    {
+        "id": "75d144e45a74fc39",
+        "type": "function",
+        "z": "721ba432f07e8704",
+        "name": "Save Stop + CT",
+        "func": "const timeZone = 'Asia/Bangkok';\nconst start = flow.get(\"start_time\");\nconst [hours, minutes, seconds] = start.split(\":\").map(Number);\n\nconst nowDate = new Date();\n\nconst startTimeDate = new Date(nowDate);\nstartTimeDate.setHours(hours, minutes, seconds, 0);\n\n\nconst endTimeDate = new Date();\n\nfunction formatDateTime(date) {\n  const yyyy = date.getFullYear();\n  const mm = String(date.getMonth() + 1).padStart(2, '0');\n  const dd = String(date.getDate()).padStart(2, '0');\n  const hh = String(date.getHours()).padStart(2, '0');\n  const mi = String(date.getMinutes()).padStart(2, '0');\n  const ss = String(date.getSeconds()).padStart(2, '0');\n  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;\n}\n\nconst startTimeStr = formatDateTime(startTimeDate);\nconst endTimeStr = formatDateTime(endTimeDate);\n\nconst ct_sec = ((endTimeDate.getTime() - startTimeDate.getTime()) / 1000).toFixed(2);\nconst filename = flow.get(\"current_filename\") || \"unknown.mp4\";\n\nmsg.query = `\n  INSERT INTO \"VideoRecord\" (\"filename\", \"startTime\", \"endTime\", \"ctSec\")\n  VALUES ('${filename}', '${startTimeStr}', '${endTimeStr}', ${ct_sec});\n`;\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 660,
+        "y": 160,
+        "wires": [
+            [
+                "exec_kill_ffmpeg",
+                "7523358b7bd3940a"
+            ]
+        ]
+    },
+    {
+        "id": "6e57ef0e838b1785",
+        "type": "switch",
+        "z": "721ba432f07e8704",
+        "name": "Start or Stop?",
+        "property": "payload",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "1",
+                "vt": "num"
+            },
+            {
+                "t": "eq",
+                "v": "0",
+                "vt": "num"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 440,
+        "y": 160,
+        "wires": [
+            [
+                "5a1d1b881956d874"
+            ],
+            [
+                "75d144e45a74fc39"
+            ]
+        ]
+    },
+    {
+        "id": "cea7092f3e5f114f",
+        "type": "function",
+        "z": "721ba432f07e8704",
+        "name": "select",
+        "func": "let jude = msg.payload;\nlet prevJude = context.get(\"prevJude\") || null;\nlet sent1 = context.get(\"sent1\") || false;\nlet sent0 = context.get(\"sent0\") || false;\n\nif (jude === 1) {\n    if (!sent1) {\n        msg.select = 1;\n        context.set(\"sent1\", true);\n        context.set(\"sent0\", false);\n        context.set(\"prevJude\", 1);\n        return msg;\n    }\n} else if (jude === 0) {\n    if (!sent0) {\n        msg.select = 1;\n        context.set(\"sent0\", true);\n        context.set(\"sent1\", false);\n        context.set(\"prevJude\", 0);\n        return msg;\n    }\n}\nreturn null;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 270,
+        "y": 160,
+        "wires": [
+            [
+                "6e57ef0e838b1785"
+            ]
+        ]
+    },
+    {
+        "id": "start-stop-ffmpeg",
+        "type": "function",
+        "z": "721ba432f07e8704",
+        "name": "Control ffmpeg",
+        "func": "const current_filename = `video_${new Date().toISOString().slice(0, 10)}_${Date.now()}`;\nflow.set(\"current_filename\", current_filename);\n\nconst outputPath = `C:/Users/HOME/OneDrive/Documents/WORK/my-video-chart/frontend/public/videos/${current_filename}.mkv`;\n\nconst rtspUrl = \"rtsp://admin:aniwat2561@192.168.1.64:554/Streaming/Channels/101\";\n\nconst command = `-i \"${rtspUrl}\" -c copy \"${outputPath}\"`;\n\nflow.set(\"command\", command);\n\nmsg.payload = command;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 860,
+        "y": 120,
+        "wires": [
+            [
+                "exec-ffmpeg"
+            ]
+        ]
+    },
+    {
+        "id": "exec-ffmpeg",
+        "type": "exec",
+        "z": "721ba432f07e8704",
+        "command": "ffmpeg",
+        "addpay": "payload",
+        "append": "",
+        "useSpawn": "true",
+        "timer": "",
+        "winHide": false,
+        "name": "Run ffmpeg (spawn)",
+        "x": 1060,
+        "y": 120,
+        "wires": [
+            [],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "exec_kill_ffmpeg",
+        "type": "exec",
+        "z": "721ba432f07e8704",
+        "command": "taskkill",
+        "addpay": false,
+        "append": "/IM ffmpeg.exe /F",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "Kill ffmpeg",
+        "x": 850,
+        "y": 160,
+        "wires": [
+            [],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "http_convert",
+        "type": "http request",
+        "z": "721ba432f07e8704",
+        "name": "Call /convert-mkv API",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "http://127.0.0.1:5100/convert-mkv",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "basic",
+        "senderr": false,
+        "headers": [],
+        "x": 940,
+        "y": 200,
+        "wires": [
+            [
+                "debug_response"
+            ]
+        ]
+    },
+    {
+        "id": "debug_response",
+        "type": "debug",
+        "z": "721ba432f07e8704",
+        "name": "Debug API Response",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 1140,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "cf1ee4bb8cfb8c68",
+        "type": "delay",
+        "z": "721ba432f07e8704",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 780,
+        "y": 200,
+        "wires": [
+            [
+                "http_convert"
+            ]
+        ]
+    },
+    {
+        "id": "7523358b7bd3940a",
+        "type": "postgresql",
+        "z": "721ba432f07e8704",
+        "name": "",
+        "query": "SELECT * FROM ;",
+        "postgreSQLConfig": "17495333485ac6b5",
+        "split": false,
+        "rowsPerMsg": 1,
+        "outputs": 1,
+        "x": 650,
+        "y": 200,
+        "wires": [
+            [
+                "cf1ee4bb8cfb8c68"
+            ]
+        ]
+    },
+    {
+        "id": "c36b939a0a43684b",
+        "type": "function",
+        "z": "721ba432f07e8704",
+        "name": "Save Stop + CT",
+        "func": "const timeZone = 'Asia/Bangkok';\n\n// ดึง start_time จาก flow\nconst start = flow.get(\"start_time\");\n\n// แปลงเป็น Date object ถ้าไม่ใช่\nlet hours, minutes, seconds;\n\nif (typeof start === 'string') {\n  // กรณี start เป็น string เช่น \"14:30:45\"\n  [hours, minutes, seconds] = start.split(\":\").map(Number);\n} else {\n  // กรณี start เป็น Date object\n  const startDate = new Date(start);\n  hours = startDate.getHours();\n  minutes = startDate.getMinutes();\n  seconds = startDate.getSeconds();\n}\n\n// เวลาปัจจุบัน\nconst nowDate = new Date();\n\n// สร้าง startTimeDate จากเวลาปัจจุบัน + เวลาเริ่ม\nconst startTimeDate = new Date(nowDate);\nstartTimeDate.setHours(hours, minutes, seconds, 0);\n\n// เวลาสิ้นสุดคือเวลาปัจจุบัน\nconst endTimeDate = new Date();\n\n// ฟังก์ชันแปลง Date เป็น yyyy-mm-dd hh:mm:ss\nfunction formatDateTime(date) {\n  const yyyy = date.getFullYear();\n  const mm = String(date.getMonth() + 1).padStart(2, '0');\n  const dd = String(date.getDate()).padStart(2, '0');\n  const hh = String(date.getHours()).padStart(2, '0');\n  const mi = String(date.getMinutes()).padStart(2, '0');\n  const ss = String(date.getSeconds()).padStart(2, '0');\n  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;\n}\n\nconst startTimeStr = formatDateTime(startTimeDate);\nconst endTimeStr = formatDateTime(endTimeDate);\n\n// คำนวณความต่างเวลาเป็นวินาที\nconst ct_sec = ((endTimeDate.getTime() - startTimeDate.getTime()) / 1000).toFixed(2);\n\n// ชื่อไฟล์จาก flow\nconst filename = flow.get(\"current_filename\") || \"unknown.mp4\";\n\n// สร้าง SQL query\nmsg.query = `\n  INSERT INTO \"VideoRecord\" (\"filename\", \"startTime\", \"endTime\", \"ctSec\")\n  VALUES ('${filename}', '${startTimeStr}', '${endTimeStr}', ${ct_sec});\n`;\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 740,
+        "y": 400,
+        "wires": [
+            [
+                "c9790bb3c7802f93",
+                "e6a9adaec9cef672"
+            ]
+        ]
+    },
+    {
+        "id": "c9790bb3c7802f93",
+        "type": "exec",
+        "z": "721ba432f07e8704",
+        "command": "taskkill",
+        "addpay": false,
+        "append": "/IM ffmpeg.exe /F",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "Kill ffmpeg",
+        "x": 930,
+        "y": 400,
+        "wires": [
+            [],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "65c5483342bdf19e",
+        "type": "http request",
+        "z": "721ba432f07e8704",
+        "name": "Call /convert-mkv API",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "http://127.0.0.1:5100/convert-mkv",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "basic",
+        "senderr": false,
+        "headers": [],
+        "x": 1020,
+        "y": 440,
+        "wires": [
+            [
+                "8921bf2498f60c80"
+            ]
+        ]
+    },
+    {
+        "id": "8921bf2498f60c80",
+        "type": "debug",
+        "z": "721ba432f07e8704",
+        "name": "Debug API Response",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 1220,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "ad82512f8b674faf",
+        "type": "delay",
+        "z": "721ba432f07e8704",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "1",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 860,
+        "y": 440,
+        "wires": [
+            [
+                "65c5483342bdf19e"
+            ]
+        ]
+    },
+    {
+        "id": "e6a9adaec9cef672",
+        "type": "postgresql",
+        "z": "721ba432f07e8704",
+        "name": "",
+        "query": "SELECT * FROM ;",
+        "postgreSQLConfig": "17495333485ac6b5",
+        "split": false,
+        "rowsPerMsg": 1,
+        "outputs": 1,
+        "x": 730,
+        "y": 440,
+        "wires": [
+            [
+                "ad82512f8b674faf"
+            ]
+        ]
+    },
+    {
+        "id": "74b41fe61affe89a",
+        "type": "comment",
+        "z": "721ba432f07e8704",
+        "name": "0/1",
+        "info": "",
+        "x": 110,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "ee358062de4b0cfc",
+        "type": "comment",
+        "z": "721ba432f07e8704",
+        "name": "1 ^",
+        "info": "",
+        "x": 110,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "b38a04435b60631a",
+        "type": "function",
+        "z": "721ba432f07e8704",
+        "name": "Save Start Time",
+        "func": "const now = new Date();\nflow.set(\"start_time\", now);\n\nconst dateStr = now.toLocaleDateString(\"sv-SE\", { timeZone: \"Asia/Bangkok\" });\nconst filename = `video_${dateStr}.mp4`;\nflow.set(\"current_filename\", filename);\n\nmsg.filename = filename;\nmsg.payload = filename;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 860,
+        "y": 520,
+        "wires": [
+            [
+                "8c4102c674a612a2"
+            ]
+        ]
+    },
+    {
+        "id": "8c4102c674a612a2",
+        "type": "function",
+        "z": "721ba432f07e8704",
+        "name": "Control ffmpeg",
+        "func": "const current_filename = `video_${new Date().toISOString().slice(0, 10)}_${Date.now()}`;\nflow.set(\"current_filename\", current_filename);\nconst outputPath = `C:/Users/HOME/OneDrive/Documents/WORK/my-video-chart/frontend/public/videos/${current_filename}.mkv`;\nconst rtspUrl = \"rtsp://admin:aniwat2561@192.168.1.64:554/Streaming/Channels/101\";\nlet command = `-i \"${rtspUrl}\" -c copy \"${outputPath}\"`;\nflow.set(\"command\", command);\nmsg.payload = `-i \"${rtspUrl}\" -c copy \"${outputPath}\"`;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1020,
+        "y": 520,
+        "wires": [
+            [
+                "83b03b354c186b65"
+            ]
+        ]
+    },
+    {
+        "id": "83b03b354c186b65",
+        "type": "exec",
+        "z": "721ba432f07e8704",
+        "command": "ffmpeg",
+        "addpay": "payload",
+        "append": "",
+        "useSpawn": "true",
+        "timer": "",
+        "winHide": false,
+        "name": "Run ffmpeg (spawn)",
+        "x": 1200,
+        "y": 520,
+        "wires": [
+            [],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "b341f93ad3161d66",
+        "type": "delay",
+        "z": "721ba432f07e8704",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "3",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 720,
+        "y": 520,
+        "wires": [
+            [
+                "b38a04435b60631a"
+            ]
+        ]
+    },
+    {
+        "id": "feb8d5b0fc1343d9",
+        "type": "inject",
+        "z": "721ba432f07e8704",
+        "name": "Start",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "1",
+        "payloadType": "num",
+        "x": 130,
+        "y": 380,
+        "wires": [
+            [
+                "6453c015acf7e53c"
+            ]
+        ]
+    },
+    {
+        "id": "136ba116c24c794b",
+        "type": "inject",
+        "z": "721ba432f07e8704",
+        "name": "Stop",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0",
+        "payloadType": "num",
+        "x": 130,
+        "y": 460,
+        "wires": [
+            [
+                "6453c015acf7e53c"
+            ]
+        ]
+    },
+    {
+        "id": "568b71ff395a6653",
+        "type": "switch",
+        "z": "721ba432f07e8704",
+        "name": "Start or Stop?",
+        "property": "select",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "1",
+                "vt": "num"
+            },
+            {
+                "t": "eq",
+                "v": "2",
+                "vt": "num"
+            },
+            {
+                "t": "eq",
+                "v": "0",
+                "vt": "num"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 3,
+        "x": 440,
+        "y": 420,
+        "wires": [
+            [
+                "1df70ae8cc420787",
+                "dd34c581f3135bd6"
+            ],
+            [
+                "e6866838dc9bb31e",
+                "c36b939a0a43684b",
+                "b341f93ad3161d66"
+            ],
+            [
+                "e42ae9e9827fff96"
+            ]
+        ]
+    },
+    {
+        "id": "6453c015acf7e53c",
+        "type": "function",
+        "z": "721ba432f07e8704",
+        "name": "select",
+        "func": "let judes = msg.payload;\nlet prevValues = flow.get(\"prevValues\");\nlet hasSentInitial = flow.get(\"hasSentInitial\") || false;\n\nif (prevValues === undefined) {\n    prevValues = null;\n}\nif (!hasSentInitial) {\n    msg.select = judes;\n    flow.set(\"hasSentInitial\", true);\n    flow.set(\"prevValues\", judes);\n    return msg;\n}\n\nif (prevValues === 0 && judes === 1) {\n    msg.select = 2;\n    flow.set(\"prevValues\", judes);\n    return msg;\n}\n\nif (prevValues === 1 && judes === 0) {\n    msg.select = 0;\n    flow.set(\"prevValues\", judes);\n    return msg;\n}\n\nflow.set(\"prevValues\", judes);\nreturn null;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 270,
+        "y": 420,
+        "wires": [
+            [
+                "568b71ff395a6653"
+            ]
+        ]
+    },
+    {
+        "id": "dd34c581f3135bd6",
+        "type": "function",
+        "z": "721ba432f07e8704",
+        "name": "Save Start Time",
+        "func": "const now = new Date();\n\nconst timeZone = 'Asia/Bangkok';\nconst dateStr = now.toLocaleDateString(\"sv-SE\", { timeZone });\nconst timeStr = now.toLocaleTimeString(\"en-GB\", { timeZone });\nflow.set(\"start_time\", timeStr);\nconst filename = `video_${dateStr}.mp4`;\nflow.set(\"current_filename\", filename);\n\nmsg.filename = filename;\nmsg.payload = { dateStr, timeStr, filename };\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 740,
+        "y": 340,
+        "wires": [
+            [
+                "0695ddd9c6ed21d3"
+            ]
+        ]
+    },
+    {
+        "id": "0695ddd9c6ed21d3",
+        "type": "function",
+        "z": "721ba432f07e8704",
+        "name": "Control ffmpeg",
+        "func": "const current_filename = `video_${new Date().toISOString().slice(0, 10)}_${Date.now()}`;\nflow.set(\"current_filename\", current_filename);\n\nconst outputPath = `C:/Users/HOME/OneDrive/Documents/WORK/my-video-chart/frontend/public/videos/${current_filename}.mkv`;\n\nconst rtspUrl = \"rtsp://admin:aniwat2561@192.168.1.64:554/Streaming/Channels/101\";\n\nconst command = `-i \"${rtspUrl}\" -c copy \"${outputPath}\"`;\n\nflow.set(\"command\", command);\n\nmsg.payload = command;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 900,
+        "y": 340,
+        "wires": [
+            [
+                "4b5be056948b1c0a"
+            ]
+        ]
+    },
+    {
+        "id": "4b5be056948b1c0a",
+        "type": "exec",
+        "z": "721ba432f07e8704",
+        "command": "ffmpeg",
+        "addpay": "payload",
+        "append": "",
+        "useSpawn": "true",
+        "timer": "",
+        "winHide": false,
+        "name": "Run ffmpeg (spawn)",
+        "x": 1080,
+        "y": 340,
+        "wires": [
+            [],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "ab217fc1898a2d9f",
+        "type": "inject",
+        "z": "721ba432f07e8704",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 520,
+        "y": 240,
+        "wires": [
+            [
+                "http_convert"
+            ]
+        ]
+    },
+    {
+        "id": "e42ae9e9827fff96",
+        "type": "debug",
+        "z": "721ba432f07e8704",
+        "name": "3",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "select",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 430,
+        "y": 600,
+        "wires": []
+    },
+    {
+        "id": "e6866838dc9bb31e",
+        "type": "debug",
+        "z": "721ba432f07e8704",
+        "name": "2",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "select",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 430,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "1df70ae8cc420787",
+        "type": "debug",
+        "z": "721ba432f07e8704",
+        "name": "1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "select",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 430,
+        "y": 520,
+        "wires": []
+    },
+    {
+        "id": "e161d704f6c87c57",
+        "type": "function",
+        "z": "721ba432f07e8704",
+        "name": "select",
+        "func": "let judes = msg.payload;\nlet prevValues = flow.get(\"prevValues\");\nlet hasSentFirstRise = flow.get(\"hasSentFirstRise\") || false;\n\nif (prevValues === undefined) {\n    prevValues = 0;\n    flow.set(\"prevValues\", prevValues);\n}\n\n// ตรวจจับ 0 → 1 ครั้งแรก\nif (prevValues === 0 && judes === 1) {\n    if (!hasSentFirstRise) {\n        msg.select = 1;  // ครั้งแรก\n        flow.set(\"hasSentFirstRise\", true);\n    } else {\n        msg.select = 2;  // ครั้งต่อไป\n    }\n    flow.set(\"prevValues\", judes);\n    return msg;\n}\n\n// ตรวจจับ 1 → 0\nif (prevValues === 1 && judes === 0) {\n    msg.select = 0;\n    flow.set(\"prevValues\", judes);\n    return msg;\n}\n\n// ไม่เข้าเงื่อนไขใด ๆ\nflow.set(\"prevValues\", judes);\nreturn null;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 270,
+        "y": 600,
+        "wires": [
+            [
+                "568b71ff395a6653"
+            ]
+        ]
+    },
+    {
+        "id": "c03f8c69a009a7c7",
+        "type": "inject",
+        "z": "721ba432f07e8704",
+        "name": "Start",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "1",
+        "payloadType": "num",
+        "x": 130,
+        "y": 600,
+        "wires": [
+            [
+                "e161d704f6c87c57"
+            ]
+        ]
+    },
+    {
+        "id": "fc8c962b942bc672",
+        "type": "inject",
+        "z": "721ba432f07e8704",
+        "name": "Stop",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0",
+        "payloadType": "num",
+        "x": 130,
+        "y": 640,
+        "wires": [
+            [
+                "e161d704f6c87c57"
+            ]
+        ]
+    },
+    {
+        "id": "17495333485ac6b5",
+        "type": "postgreSQLConfig",
+        "name": "",
+        "host": "127.0.0.1",
+        "hostFieldType": "str",
+        "port": 5432,
+        "portFieldType": "num",
+        "database": "videodb",
+        "databaseFieldType": "str",
+        "ssl": "false",
+        "sslFieldType": "bool",
+        "applicationName": "",
+        "applicationNameType": "str",
+        "max": 10,
+        "maxFieldType": "num",
+        "idle": 1000,
+        "idleFieldType": "num",
+        "connectionTimeout": 10000,
+        "connectionTimeoutFieldType": "num",
+        "user": "postgres",
+        "userFieldType": "str",
+        "password": "11110000",
+        "passwordFieldType": "str"
+    }
+]
