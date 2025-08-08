@@ -33,30 +33,51 @@ export default function PartTable() {
   return (
     <div className="overflow-x-auto custom-scrollbar rounded-lg shadow-md w-full h-full bg-sky-800">
       <table className="min-w-full table-auto border border-sky-700 text-sm text-black bg-white ">
-        <thead className="bg-sky-700 text-xs uppercase sticky top-0 z-10">
+        <thead className="bg-[#1c96c5] text-xs uppercase sticky top-0 z-10">
           <tr>
-            <th className="px-4 py-2 border border-sky-600 text-center">No</th>
-            <th className="px-4 py-2 border border-sky-600 text-center">Part Number</th>
-            <th className="px-4 py-2 border border-sky-600 text-center">Start Time</th>
-            <th className="px-4 py-2 border border-sky-600 text-center">End Time</th>
-            <th className="px-4 py-2 border border-sky-600 text-center">CT (sec)</th>
-            <th className="px-4 py-2 border border-sky-600 text-center">Standard</th>
-            <th className="px-4 py-2 border border-sky-600 text-center">Limit High</th>
-            <th className="px-4 py-2 border border-sky-600 text-center">Limit Low</th>
-            <th className="px-4 py-2 border border-sky-600 text-center">Action</th>
+            <th className="px-4 py-2 border border-[#20a7db] text-center">No</th>
+            <th className="px-4 py-2 border border-[#20a7db] text-center">
+              Part Number
+            </th>
+            <th className="px-4 py-2 border border-[#20a7db] text-center">
+              Start Time
+            </th>
+            <th className="px-4 py-2 border border-[#20a7db] text-center">
+              End Time
+            </th>
+            <th className="px-4 py-2 border border-[#20a7db] text-center">
+              CT (sec)
+            </th>
+            <th className="px-4 py-2 border border-[#20a7db] text-center">
+              Standard
+            </th>
+            <th className="px-4 py-2 border border-[#20a7db] text-center">
+              Limit High
+            </th>
+            <th className="px-4 py-2 border border-[#20a7db] text-center">
+              Limit Low
+            </th>
+            <th className="px-4 py-2 border border-[#20a7db] text-center">
+              Action
+            </th>
           </tr>
         </thead>
         <tbody>
           {loading ? (
             <tr>
-              <td colSpan={9} className="py-8 text-center text-sky-300">
-                Loading...
+              <td colSpan={9} className="py-32 text-center">
+                <div className="flex gap-4 justify-center items-center">
+                  <div className="w-4 h-4 rounded-full animate-bounce bg-blue-500" />
+                  <div className="w-4 h-4 rounded-full animate-bounce bg-blue-500 delay-100" />
+                  <div className="w-4 h-4 rounded-full animate-bounce bg-blue-500 delay-200" />
+                </div>
+                <p className="text-sky-500 mt-2 text-sm">Loading data...</p>
               </td>
             </tr>
           ) : data.length === 0 ? (
             <tr>
-              <td colSpan={9} className="py-auto px-auto text-center">
-                <div className="flex flex-col items-center justify-center gap-2 h-full p-20.5">
+              <td colSpan={9} className="py-20 text-center">
+                <div className="flex flex-col items-center justify-center gap-2">
                   <PackageOpen className="w-12 h-12 text-sky-500" />
                   <span className="text-sky-400">No data available</span>
                 </div>
@@ -77,16 +98,33 @@ export default function PartTable() {
               }
 
               return (
-                <tr key={item.id} className={`hover:bg-sky-500 ${rowColor} text-center`}>
-                  <td className="px-4 py-2 border border-sky-600">{index + 1}</td>
-                  <td className="px-4 py-2 border border-sky-600">{item.partNumber}</td>
-                  <td className="px-4 py-2 border border-sky-600">{item.startTime}</td>
-                  <td className="px-4 py-2 border border-sky-600">{item.endTime}</td>
-                  <td className="px-4 py-2 border border-sky-600">{item.ct}</td>
-                  <td className="px-4 py-2 border border-sky-600">{item.standard}</td>
-                  <td className="px-4 py-2 border border-sky-600">{item.limitHigh}</td>
-                  <td className="px-4 py-2 border border-sky-600">{item.limitLow}</td>
-                  <td className="px-4 py-2 border border-sky-600 text-center">
+                <tr
+                  key={item.id}
+                  className={`hover:bg-[#62c1e5] ${rowColor} text-center`}
+                >
+                  <td className="px-4 py-2 border border-[#20a7db]">
+                    {index + 1}
+                  </td>
+                  <td className="px-4 py-2 border border-[#20a7db]">
+                    {item.partNumber}
+                  </td>
+                  <td className="px-4 py-2 border border-[#20a7db]">
+                    {item.startTime}
+                  </td>
+                  <td className="px-4 py-2 border border-[#20a7db]">
+                    {item.endTime}
+                  </td>
+                  <td className="px-4 py-2 border border-[#20a7db]">{item.ct}</td>
+                  <td className="px-4 py-2 border border-[#20a7db]">
+                    {item.standard}
+                  </td>
+                  <td className="px-4 py-2 border border-[#20a7db]">
+                    {item.limitHigh}
+                  </td>
+                  <td className="px-4 py-2 border border-[#20a7db]">
+                    {item.limitLow}
+                  </td>
+                  <td className="px-4 py-2 border border-[#20a7db] text-center">
                     <button
                       className="px-2 py-1 text-xs bg-red-600 hover:bg-red-700 rounded"
                       onClick={() => {
@@ -106,7 +144,7 @@ export default function PartTable() {
 
       {modalOpen && selectedLog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-sky-900 rounded-md shadow-lg max-w-xl w-full p-4 relative">
+          <div className="bg-sky-900 rounded-md shadow-lg max-w-xl w-full p-4 relative ">
             <button
               onClick={() => setModalOpen(false)}
               className="absolute top-2 right-2 text-white text-xl font-bold hover:text-red-500"
@@ -116,10 +154,11 @@ export default function PartTable() {
             </button>
 
             <h2 className="text-white text-lg font-semibold mb-4">
-              Video for {selectedLog.partNumber.split("-").slice(0, 2).join("-")}
+              Video for{" "}
+              {selectedLog.partNumber.split("-").slice(0, 2).join("-")}
             </h2>
 
-            <video
+            {/* <video
               controls
               className="w-full rounded-md"
               src={`/videos/${selectedLog.partNumber}.mp4`}
@@ -129,7 +168,15 @@ export default function PartTable() {
               }}
             >
               Your browser does not support the video tag.
-            </video>
+            </video> */}
+            <iframe
+              className="w-full h-64 md:h-96 rounded-md"
+              src={`https://www.youtube.com/embed/2Z0aWl_GIT0`}
+              title="YouTube video"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            ></iframe>
           </div>
         </div>
       )}

@@ -14,6 +14,7 @@ import {
   ChartData,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
+import ChartDataLabels from "chartjs-plugin-datalabels";
 
 ChartJS.register(
   CategoryScale,
@@ -22,7 +23,8 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  ChartDataLabels
 );
 
 type Log = {
@@ -40,7 +42,6 @@ type Log = {
 export default function LineChart() {
   const [logs, setLogs] = useState<Log[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<Log | null>(null);
 
@@ -59,28 +60,13 @@ export default function LineChart() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center p-4 text-white">
-        <svg
-          className="animate-spin h-8 w-8 text-white"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            className="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="4"
-          ></circle>
-          <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8v8H4z"
-          ></path>
-        </svg>
-        <span className="ml-2">Loading chart...</span>
+      <div className="flex flex-col items-center justify-center h-full mt-20">
+        <div className="flex gap-4 justify-center items-center">
+          <div className="w-4 h-4 rounded-full animate-bounce bg-blue-500" />
+          <div className="w-4 h-4 rounded-full animate-bounce bg-blue-500 delay-100" />
+          <div className="w-4 h-4 rounded-full animate-bounce bg-blue-500 delay-200" />
+        </div>
+        <p className="text-sky-500 mt-2 text-sm">Loading data...</p>
       </div>
     );
   }
@@ -89,18 +75,16 @@ export default function LineChart() {
     return <div className="text-white p-4">No log data available</div>;
   }
 
-  const labels = logs.map((log) =>
-    log.partNumber.split("-").slice(0, 2).join("-")
-  );
-
+  const labels = logs.map((log) => log.startTime);
   const ctValues = logs.map((log) => Number(log.ct));
   const standardValues = logs.map((log) => Number(log.standard));
+  const minLimitLineData = logs.map((log) => Number(log.limitLow));
+  const maxLimitLineData = logs.map((log) => Number(log.limitHigh));
 
   const limitsByLabel: Record<
     string,
     { limitLows: number[]; limitHighs: number[] }
   > = {};
-
   logs.forEach((log) => {
     const label = log.partNumber.split("-").slice(0, 2).join("-");
     if (!limitsByLabel[label]) {
@@ -114,20 +98,12 @@ export default function LineChart() {
     string,
     { minLimitLow: number; maxLimitHigh: number }
   > = {};
-
   for (const label in limitsByLabel) {
     minMaxByLabel[label] = {
       minLimitLow: Math.min(...limitsByLabel[label].limitLows),
       maxLimitHigh: Math.max(...limitsByLabel[label].limitHighs),
     };
   }
-
-  const minLimitLineData = labels.map((label) =>
-    minMaxByLabel[label] ? minMaxByLabel[label].minLimitLow : null
-  );
-  const maxLimitLineData = labels.map((label) =>
-    minMaxByLabel[label] ? minMaxByLabel[label].maxLimitHigh : null
-  );
 
   const pointBackgroundColors = logs.map((log) => {
     const ct = Number(log.ct);
@@ -143,11 +119,27 @@ export default function LineChart() {
         label: "CT",
         data: ctValues,
         fill: false,
-        borderColor: "rgb(255, 255, 255)",
-        backgroundColor: "rgb(255, 255, 255)",
+        borderColor: "orange",
+        backgroundColor: "orange",
         pointBackgroundColor: pointBackgroundColors,
         tension: 0,
         pointRadius: 6,
+        datalabels: {
+          display: true,
+          align: "top",
+          anchor: "end",
+          color: "white",
+          font: {
+            weight: "bold",
+          },
+          formatter: (value: number, context) => {
+            const index = context.dataIndex;
+            const log = logs[index];
+            if (!log) return value.toFixed(2);
+            const label = log.partNumber.split("-").slice(0, 2).join("-");
+            return `${label}: ${value.toFixed(2)}`;
+          },
+        },
       },
       {
         label: "Standard",
@@ -157,6 +149,7 @@ export default function LineChart() {
         borderWidth: 2,
         borderDash: [6, 6],
         pointRadius: 0,
+        datalabels: { display: false },
       },
       {
         label: "Min Limit",
@@ -166,6 +159,7 @@ export default function LineChart() {
         borderWidth: 2,
         borderDash: [6, 6],
         pointRadius: 0,
+        datalabels: { display: false },
       },
       {
         label: "Max Limit",
@@ -175,6 +169,7 @@ export default function LineChart() {
         borderWidth: 2,
         borderDash: [6, 6],
         pointRadius: 0,
+        datalabels: { display: false },
       },
     ],
   };
@@ -219,7 +214,7 @@ export default function LineChart() {
 
   return (
     <>
-      <div className="w-full h-64 md:h-100 bg-gradient-to-b from-sky-800 to-sky-900 rounded-sm p-2">
+      <div className="w-full h-64 md:h-100 bg-gradient-to-b from-[#1c96c5] to-[#20a7db] rounded-sm p-2">
         <Line data={data} options={options} />
       </div>
 
@@ -239,7 +234,7 @@ export default function LineChart() {
               {selectedLog.partNumber.split("-").slice(0, 2).join("-")}
             </h2>
 
-            <video
+            {/* <video
               controls
               className="w-full rounded-md"
               src={`/videos/${selectedLog.partNumber}.mp4`}
@@ -249,7 +244,15 @@ export default function LineChart() {
               }}
             >
               Your browser does not support the video tag.
-            </video>
+            </video> */}
+            <iframe
+              className="w-full h-64 md:h-96 rounded-md"
+              src={`https://www.youtube.com/embed/2Z0aWl_GIT0`}
+              title="YouTube video"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            ></iframe>
           </div>
         </div>
       )}

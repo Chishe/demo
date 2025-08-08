@@ -65,12 +65,10 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
   }, [mode, selected]);
 
   useEffect(() => {
-    // ดึง partNumber จาก thresholds (ตัดซ้ำ)
     const parts = Array.from(new Set(thresholds.map((t) => t.partNumber)));
     setAvailablePartNumbers(parts);
   }, [thresholds]);
 
-  // คลิกนอก filter dropdown เพื่อปิด
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -118,7 +116,7 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
     }
   }
 
-  // แปลง input ให้รับได้ทั้ง number หรือ "" (empty)
+
   function parseNumberInput(value: string): number | "" {
     return value === "" ? "" : Number(value);
   }
@@ -241,7 +239,7 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
       onClick={handleClose}
     >
       <div
-        className="bg-white rounded-lg shadow-lg max-w-4xl w-full p-6 mx-4"
+        className="bg-white rounded-lg shadow-lg max-w-4xl w-full p-6 mx-4 text-black"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-2xl font-semibold mb-6 text-center">

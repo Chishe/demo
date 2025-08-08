@@ -33,3 +33,14 @@ body {
   background-color: #38bdf8; /* sky-400 */
   border-radius: 10px;
 }
+
+.hazard-background {
+  background-image: repeating-linear-gradient(
+    45deg,
+    #62c1e5,     /* Yellow (Tailwind yellow-400) */
+    #62c1e5 15px,
+    #333 15px,
+    #333 30px
+  );
+  color: white;
+}
