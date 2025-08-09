@@ -1,11 +1,24 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
 import axios from "axios";
-import type { ApexOptions } from "apexcharts";
-
-const ApexChart = dynamic(() => import("react-apexcharts"), { ssr: false });
+import ThresholdModal from "@/components/ThresholdModal";
+import { Notebook, TrendingUp } from "lucide-react";
+import { LabelList, RadialBar, RadialBarChart } from "recharts";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 
 interface Log {
   startTime: string;
@@ -14,11 +27,11 @@ interface Log {
   standard: string;
 }
 
-const OeeDoughnutCharts = () => {
+const OeeRadialCharts = () => {
   const [log, setLog] = useState<Log | null>(null);
   const [totalUnits, setTotalUnits] = useState<number>(10);
   const [defectUnits, setDefectUnits] = useState<number>(5);
-
+  const [open, setOpen] = useState(false);
   const [data, setData] = useState<number[]>([]);
   const [labels, setLabels] = useState<string[]>([]);
 
@@ -55,36 +68,6 @@ const OeeDoughnutCharts = () => {
     setLabels(["Availability", "Performance", "Quality", "OEE"]);
   }, [log, totalUnits, defectUnits]);
 
-  const chartOptions: ApexOptions = {
-    chart: {
-      type: "radialBar",
-    },
-    plotOptions: {
-      radialBar: {
-        hollow: {
-          size: "60%",
-        },
-        dataLabels: {
-          name: {
-            show: true,
-            fontSize: "16px",
-            fontWeight: "600",
-            color: "#334155", // slate-700
-          },
-          value: {
-            fontSize: "14px",
-            fontWeight: "500",
-            color: "#475569", // slate-600
-            formatter: function (val) {
-              return parseFloat(val.toFixed(1)) + "%";
-            },
-          },
-        },
-      },
-    },
-    colors: ["#22c55e", "#facc15", "#ef4444", "#7c3aed"], // green, yellow, red, purple
-  };
-
   if (!log)
     return (
       <div className="flex flex-col items-center justify-center h-full">
@@ -97,37 +80,63 @@ const OeeDoughnutCharts = () => {
       </div>
     );
 
+  // แปลง data และ labels เป็น chartData
+  const chartData = labels.map((label, i) => ({
+    name: label,
+    value: Number(data[i]?.toFixed(1)) || 0,
+    fill: `var(--chart-${i + 1})`,
+  }));
+
+  const chartConfig: ChartConfig = labels.reduce((acc, label, i) => {
+    acc[label.toLowerCase()] = {
+      label,
+      color: `var(--chart-${i + 1})`,
+    };
+    return acc;
+  }, {} as ChartConfig);
+
   return (
-    <div className="w-full h-full py-auto">
+    <div className="w-full h-full p-4 bg-sky-100 rounded-md shadow-lg border-2 border-amber-50">
+      {/* ปุ่ม Threshold */}
+      <div className="w-full pt-2 hazard-background flex justify-center rounded-md text-center font-bold mb-4">
+        <button
+          onClick={() => setOpen(true)}
+          className="relative inline-flex items-center justify-center p-0.5 mb-2 me-2 overflow-hidden 
+          text-sm font-medium rounded-lg group bg-gradient-to-br from-cyan-500 to-blue-500 hover:text-white focus:ring-4 focus:outline-none"
+        >
+          <span className="relative px-5 py-2.5 bg-white rounded-md group-hover:bg-transparent">
+            <div className="flex text-black">
+              <Notebook className="pb-1" /> SETTING THRESHOLD
+            </div>
+          </span>
+        </button>
+        <ThresholdModal isOpen={open} onClose={() => setOpen(false)} />
+      </div>
+
+      {/* Form input */}
       <form
         onSubmit={(e) => e.preventDefault()}
-        className="mb-10 flex flex-col sm:flex-row sm:justify-center gap-4"
+        className="pt-4 px-2 mb-5 flex flex-col sm:flex-row sm:justify-center gap-4"
       >
-        <div className="w-full max-w-xs relative">
+        <div className="w-full relative">
           <input
             type="number"
-            step="1"
             min={0}
             value={totalUnits}
             onChange={(e) =>
               setTotalUnits(Math.max(0, Number(e.target.value) || 0))
             }
-            id="totalUnits"
-            className="peer block w-full rounded-md border border-slate-300 bg-white px-3 pt-4 pb-2 text-sm text-slate-900 placeholder-transparent focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="peer block w-full rounded-md border px-2 pt-4 pb-2 text-sm bg-white"
             placeholder="Units Produced"
           />
-          <label
-            htmlFor="totalUnits"
-            className="absolute left-3 top-2 text-xs text-slate-500 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-400 peer-focus:top-2 peer-focus:text-xs peer-focus:text-indigo-600"
-          >
+          <label className="absolute left-3 top-2 text-xs text-slate-500">
             Units Produced
           </label>
         </div>
 
-        <div className="w-full  h-full max-w-xs relative">
+        <div className="w-full relative">
           <input
             type="number"
-            step="1"
             min={0}
             max={totalUnits}
             value={defectUnits}
@@ -136,42 +145,61 @@ const OeeDoughnutCharts = () => {
               if (val > totalUnits) val = totalUnits;
               setDefectUnits(val);
             }}
-            id="defectUnits"
-            className="peer block w-full rounded-md border border-slate-300 bg-white px-3 pt-4 pb-2 text-sm text-slate-900 placeholder-transparent focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="peer block w-full rounded-md border px-2 pt-4 pb-2 text-sm bg-white"
             placeholder="Defective Units"
           />
-          <label
-            htmlFor="defectUnits"
-            className="absolute left-3 top-2 text-xs text-slate-500 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-400 peer-focus:top-2 peer-focus:text-xs peer-focus:text-indigo-600"
-          >
+          <label className="absolute left-3 top-2 text-xs text-slate-500">
             Defective Units
           </label>
         </div>
       </form>
 
-      {/* Charts */}
-      <div>
-        {data.map((value, index) => (
-          <div
-            key={index}
-            className="h-full w-full rounded-lg shadow-md flex flex-col items-center border-2 border-[#20a7db]"
+      {/* Radial Chart */}
+      <Card className="flex flex-col h-[60vh]">
+        <CardHeader className="items-center pb-0">
+          <CardTitle>OEE Metrics</CardTitle>
+          <CardDescription>Calculated from production data</CardDescription>
+        </CardHeader>
+        <CardContent className="flex-1 pb-0">
+          <ChartContainer
+            config={chartConfig}
+            className="mx-auto aspect-square max-h-[250px]"
           >
-            <ApexChart
-              type="radialBar"
-              series={[value]}
-              options={{
-                ...chartOptions,
-                labels: [labels[index]],
-                colors: [chartOptions.colors?.[index] || "#000"],
-              }}
-              height="100%"
-              width="100%"
-            />
+            <RadialBarChart
+              data={chartData}
+              startAngle={-90}
+              endAngle={380}
+              innerRadius={30}
+              outerRadius={110}
+            >
+              <ChartTooltip
+                cursor={false}
+                content={
+                  <ChartTooltipContent hideLabel nameKey="name" />
+                }
+              />
+              <RadialBar dataKey="value" background>
+                <LabelList
+                  position="insideStart"
+                  dataKey="name"
+                  className="fill-white capitalize mix-blend-luminosity"
+                  fontSize={11}
+                />
+              </RadialBar>
+            </RadialBarChart>
+          </ChartContainer>
+        </CardContent>
+        <CardFooter className="flex-col gap-2 text-sm">
+          {/* <div className="flex items-center gap-2 leading-none font-medium">
+            Trending up <TrendingUp className="h-4 w-4" />
           </div>
-        ))}
-      </div>
+          <div className="text-muted-foreground leading-none">
+            Showing current OEE breakdown
+          </div> */}
+        </CardFooter>
+      </Card>
     </div>
   );
 };
 
-export default OeeDoughnutCharts;
+export default OeeRadialCharts;

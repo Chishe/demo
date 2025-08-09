@@ -2,6 +2,9 @@
 
 import React, { useEffect, useState } from "react";
 import { PackageOpen, CirclePlay } from "lucide-react";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 type Log = {
   id: number;
@@ -30,12 +33,74 @@ export default function PartTable() {
       });
   }, []);
 
+  // ===== Excel Export =====
+  const exportExcel = () => {
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Logs");
+    XLSX.writeFile(workbook, "logs.xlsx");
+  };
+
+  const exportPDF = async () => {
+    const { default: jsPDF } = await import("jspdf");
+    const autoTable = (await import("jspdf-autotable")).default;
+
+    const doc = new jsPDF();
+    doc.text("Logs", 14, 10);
+
+    const tableColumn = [
+      "No",
+      "Part Number",
+      "Start Time",
+      "End Time",
+      "CT (sec)",
+      "Standard",
+      "Limit High",
+      "Limit Low",
+    ];
+    const tableRows = data.map((item, index) => [
+      index + 1,
+      item.partNumber,
+      item.startTime,
+      item.endTime,
+      item.ct,
+      item.standard,
+      item.limitHigh,
+      item.limitLow,
+    ]);
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 20,
+    });
+
+    doc.save("logs.pdf");
+  };
+
   return (
-    <div className="overflow-x-auto custom-scrollbar rounded-lg shadow-md w-full h-full bg-sky-800">
+    <div className="overflow-x-auto custom-scrollbar rounded-lg shadow-md w-full h-full bg-sky-700">
+      <div className="flex gap-2 p-2 bg-sky-800">
+        <button
+          onClick={exportExcel}
+          className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded"
+        >
+          Export Excel
+        </button>
+        <button
+          onClick={exportPDF}
+          className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded"
+        >
+          Export PDF
+        </button>
+      </div>
+
       <table className="min-w-full table-auto border border-sky-700 text-sm text-black bg-white ">
         <thead className="bg-[#1c96c5] text-xs uppercase sticky top-0 z-10">
           <tr>
-            <th className="px-4 py-2 border border-[#20a7db] text-center">No</th>
+            <th className="px-4 py-2 border border-[#20a7db] text-center">
+              No
+            </th>
             <th className="px-4 py-2 border border-[#20a7db] text-center">
               Part Number
             </th>
@@ -90,12 +155,8 @@ export default function PartTable() {
               const limitLow = Number(item.limitLow);
 
               let rowColor = "";
-
-              if (ct < limitLow) {
-                rowColor = "bg-yellow-400 text-black";
-              } else if (ct > limitHigh) {
-                rowColor = "bg-red-400 text-white";
-              }
+              if (ct < limitLow) rowColor = "bg-yellow-400 text-black";
+              else if (ct > limitHigh) rowColor = "bg-red-400 text-white";
 
               return (
                 <tr
@@ -114,7 +175,9 @@ export default function PartTable() {
                   <td className="px-4 py-2 border border-[#20a7db]">
                     {item.endTime}
                   </td>
-                  <td className="px-4 py-2 border border-[#20a7db]">{item.ct}</td>
+                  <td className="px-4 py-2 border border-[#20a7db]">
+                    {item.ct}
+                  </td>
                   <td className="px-4 py-2 border border-[#20a7db]">
                     {item.standard}
                   </td>
@@ -144,11 +207,14 @@ export default function PartTable() {
 
       {modalOpen && selectedLog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-sky-900 rounded-md shadow-lg max-w-xl w-full p-4 relative ">
+          <div
+            className="bg-sky-900 rounded-md shadow-lg max-w-xl w-full p-4 relative         
+            transform transition-all duration-300 ease-out
+            opacity-0 scale-100 animate-[popIn_0.3s_ease-out_forwards]"
+          >
             <button
               onClick={() => setModalOpen(false)}
               className="absolute top-2 right-2 text-white text-xl font-bold hover:text-red-500"
-              aria-label="Close modal"
             >
               &times;
             </button>
@@ -158,17 +224,6 @@ export default function PartTable() {
               {selectedLog.partNumber.split("-").slice(0, 2).join("-")}
             </h2>
 
-            {/* <video
-              controls
-              className="w-full rounded-md"
-              src={`/videos/${selectedLog.partNumber}.mp4`}
-              onError={(e) => {
-                (e.target as HTMLVideoElement).poster =
-                  "https://via.placeholder.com/400x225?text=Video+not+found";
-              }}
-            >
-              Your browser does not support the video tag.
-            </video> */}
             <iframe
               className="w-full h-64 md:h-96 rounded-md"
               src={`https://www.youtube.com/embed/2Z0aWl_GIT0`}

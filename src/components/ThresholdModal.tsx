@@ -116,7 +116,6 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
     }
   }
 
-
   function parseNumberInput(value: string): number | "" {
     return value === "" ? "" : Number(value);
   }
@@ -235,12 +234,14 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 flex justify-center items-start pt-20 z-50 overflow-auto"
+      className="fixed inset-0 flex justify-center items-start pt-20 z-50 overflow-auto bg-transparent backdrop-blur-md"
       onClick={handleClose}
     >
       <div
-        className="bg-white rounded-lg shadow-lg max-w-4xl w-full p-6 mx-4 text-black"
         onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-lg shadow-lg max-w-4xl w-full p-6 mx-4 text-black
+                 transform transition-all duration-300 ease-out
+                 opacity-0 scale-95 animate-[popIn_0.3s_ease-out_forwards]"
       >
         <h2 className="text-2xl font-semibold mb-6 text-center">
           จัดการ Threshold
@@ -292,16 +293,16 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
           <table className="min-w-full border-collapse border border-gray-300">
             <thead className="bg-gray-100 sticky top-0">
               <tr>
-                <th className="border border-gray-300 px-3 py-2 text-left">
+                <th className="border border-gray-300 px-3 py-2 text-center">
                   Part Number
                 </th>
-                <th className="border border-gray-300 px-3 py-2 text-left">
+                <th className="border border-gray-300 px-3 py-2 text-center">
                   Standard
                 </th>
-                <th className="border border-gray-300 px-3 py-2 text-right">
+                <th className="border border-gray-300 px-3 py-2 text-center">
                   Limit High
                 </th>
-                <th className="border border-gray-300 px-3 py-2 text-right">
+                <th className="border border-gray-300 px-3 py-2 text-center">
                   Limit Low
                 </th>
                 <th className="border border-gray-300 px-3 py-2 text-center">
@@ -447,7 +448,7 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
             >
               <RotateCcw className="inline mr-1 -mb-1" />
               Reset form
-            </button> 
+            </button>
             <button
               type="submit"
               disabled={loading}
@@ -497,7 +498,8 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
         {/* Delete Confirmation Modal (แสดงทีเดียว) */}
         {showDeleteConfirm && deleteId !== null && (
           <div
-            className="fixed inset-0 flex justify-center items-center z-50"
+            className="fixed inset-0 flex justify-center items-center z-50 bg-transparent backdrop-blur-md transform transition-all duration-300 ease-out
+                 opacity-0 scale-95 animate-[popIn_0.3s_ease-out_forwards]"
             onClick={() => setShowDeleteConfirm(false)}
             aria-modal="true"
             role="dialog"

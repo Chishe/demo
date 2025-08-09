@@ -145,8 +145,8 @@ export default function LineChart() {
         label: "Standard",
         data: standardValues,
         fill: false,
-        borderColor: "green",
-        borderWidth: 2,
+        borderColor: "#52C755",
+        borderWidth: 4,
         borderDash: [6, 6],
         pointRadius: 0,
         datalabels: { display: false },
@@ -156,7 +156,7 @@ export default function LineChart() {
         data: minLimitLineData,
         fill: false,
         borderColor: "yellow",
-        borderWidth: 2,
+        borderWidth: 4,
         borderDash: [6, 6],
         pointRadius: 0,
         datalabels: { display: false },
@@ -166,7 +166,7 @@ export default function LineChart() {
         data: maxLimitLineData,
         fill: false,
         borderColor: "red",
-        borderWidth: 2,
+        borderWidth: 4,
         borderDash: [6, 6],
         pointRadius: 0,
         datalabels: { display: false },
@@ -214,13 +214,17 @@ export default function LineChart() {
 
   return (
     <>
-      <div className="w-full h-64 md:h-100 bg-gradient-to-b from-[#1c96c5] to-[#20a7db] rounded-sm p-2">
+      <div className="w-full h-64 md:h-100 bg-gradient-to-b from-blue-950 to-[#20a7db] rounded-sm p-2">
         <Line data={data} options={options} />
       </div>
 
       {modalOpen && selectedLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-md">
-          <div className="bg-sky-900 rounded-md shadow-lg max-w-xl w-full p-4 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div
+            className="bg-sky-900 rounded-md shadow-lg max-w-xl w-full p-4 relative         
+            transform transition-all duration-300 ease-out
+            opacity-0 scale-100 animate-[popIn_0.3s_ease-out_forwards]"
+          >
             <button
               onClick={() => setModalOpen(false)}
               className="absolute top-2 right-2 text-white text-xl font-bold hover:text-red-500"
