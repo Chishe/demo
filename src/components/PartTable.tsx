@@ -1,10 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { PackageOpen, CirclePlay } from "lucide-react";
+import { PackageOpen, CirclePlay, Notebook } from "lucide-react";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import ThresholdModal from "@/components/ThresholdModal";
+import { RiFileExcel2Line } from "react-icons/ri";
+import { FaRegFilePdf } from "react-icons/fa6";
+import { MdOutlineDataThresholding } from "react-icons/md";
 
 type Log = {
   id: number;
@@ -15,6 +19,7 @@ type Log = {
   standard: string;
   limitHigh: number;
   limitLow: number;
+  filename: string;
   created_at: string;
 };
 
@@ -23,6 +28,7 @@ export default function PartTable() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<Log | null>(null);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     fetch("/api/log")
@@ -85,14 +91,21 @@ export default function PartTable() {
           onClick={exportExcel}
           className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded"
         >
-          Export Excel
+          <RiFileExcel2Line className="w-8 h-8" />
         </button>
         <button
           onClick={exportPDF}
           className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded"
         >
-          Export PDF
+          <FaRegFilePdf className="w-8 h-8" />
         </button>
+        <button
+          onClick={() => setOpen(true)}
+          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded"
+        >
+          <MdOutlineDataThresholding className="w-8 h-8" />
+        </button>
+        <ThresholdModal isOpen={open} onClose={() => setOpen(false)} />
       </div>
 
       <table className="min-w-full table-auto border border-sky-700 text-sm text-black bg-white ">
@@ -141,8 +154,11 @@ export default function PartTable() {
             </tr>
           ) : data.length === 0 ? (
             <tr>
-              <td colSpan={9} className="py-20 text-center">
-                <div className="flex flex-col items-center justify-center gap-2">
+              <td
+                colSpan={9}
+                className="py-20 text-center bg-gray-300 w-full h-full"
+              >
+                <div className="flex flex-col items-center justify-center gap-2 ">
                   <PackageOpen className="w-12 h-12 text-sky-500" />
                   <span className="text-sky-400">No data available</span>
                 </div>
@@ -170,10 +186,14 @@ export default function PartTable() {
                     {item.partNumber}
                   </td>
                   <td className="px-4 py-2 border border-[#20a7db]">
-                    {item.startTime}
+                    {item.startTime
+                      ? new Date(item.startTime).toLocaleTimeString("en-GB")
+                      : ""}
                   </td>
                   <td className="px-4 py-2 border border-[#20a7db]">
-                    {item.endTime}
+                    {item.endTime
+                      ? new Date(item.endTime).toLocaleTimeString("en-GB")
+                      : ""}
                   </td>
                   <td className="px-4 py-2 border border-[#20a7db]">
                     {item.ct}
@@ -224,14 +244,17 @@ export default function PartTable() {
               {selectedLog.partNumber.split("-").slice(0, 2).join("-")}
             </h2>
 
-            <iframe
-              className="w-full h-64 md:h-96 rounded-md"
-              src={`https://www.youtube.com/embed/2Z0aWl_GIT0`}
-              title="YouTube video"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            ></iframe>
+            <video
+              controls
+              className="w-full rounded-md"
+              src={`/videos/${selectedLog.filename}.mp4`}
+              onError={(e) => {
+                (e.target as HTMLVideoElement).poster =
+                  "https://via.placeholder.com/400x225?text=Video+not+found";
+              }}
+            >
+              Your browser does not support the video tag.
+            </video>
           </div>
         </div>
       )}

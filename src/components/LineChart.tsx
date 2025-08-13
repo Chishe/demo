@@ -15,6 +15,7 @@ import {
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import ChartDataLabels from "chartjs-plugin-datalabels";
+import { PackageOpen } from "lucide-react";
 
 ChartJS.register(
   CategoryScale,
@@ -36,6 +37,7 @@ type Log = {
   standard: string;
   limitHigh: number;
   limitLow: number;
+  filename: string;
   created_at: string;
 };
 
@@ -72,44 +74,31 @@ export default function LineChart() {
   }
 
   if (logs.length === 0) {
-    return <div className="text-white p-4">No log data available</div>;
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 bg-gray-300 w-full h-full">
+        <PackageOpen className="w-12 h-12 text-sky-500" />
+        <span className="text-sky-400">No data available</span>
+      </div>
+    );
   }
 
   const labels = logs.map((log) => log.startTime);
+
   const ctValues = logs.map((log) => Number(log.ct));
-  const standardValues = logs.map((log) => Number(log.standard));
-  const minLimitLineData = logs.map((log) => Number(log.limitLow));
-  const maxLimitLineData = logs.map((log) => Number(log.limitHigh));
 
-  const limitsByLabel: Record<
-    string,
-    { limitLows: number[]; limitHighs: number[] }
-  > = {};
-  logs.forEach((log) => {
-    const label = log.partNumber.split("-").slice(0, 2).join("-");
-    if (!limitsByLabel[label]) {
-      limitsByLabel[label] = { limitLows: [], limitHighs: [] };
-    }
-    limitsByLabel[label].limitLows.push(log.limitLow);
-    limitsByLabel[label].limitHighs.push(log.limitHigh);
-  });
+  const standardValue = Number(logs[0]?.standard ?? 0);
+  const minLimitValue = Number(logs[0]?.limitLow ?? 0);
+  const maxLimitValue = Number(logs[0]?.limitHigh ?? 0);
 
-  const minMaxByLabel: Record<
-    string,
-    { minLimitLow: number; maxLimitHigh: number }
-  > = {};
-  for (const label in limitsByLabel) {
-    minMaxByLabel[label] = {
-      minLimitLow: Math.min(...limitsByLabel[label].limitLows),
-      maxLimitHigh: Math.max(...limitsByLabel[label].limitHighs),
-    };
-  }
+  const standardValues = Array(labels.length).fill(standardValue);
+  const minLimitLineData = Array(labels.length).fill(minLimitValue);
+  const maxLimitLineData = Array(labels.length).fill(maxLimitValue);
 
   const pointBackgroundColors = logs.map((log) => {
     const ct = Number(log.ct);
     if (ct < log.limitLow) return "yellow";
     if (ct > log.limitHigh) return "red";
-    return "rgb(59 130 246)";
+    return "rgb(59 130 246)"; // น้ำเงิน
   });
 
   const data: ChartData<"line"> = {
@@ -129,9 +118,7 @@ export default function LineChart() {
           align: "top",
           anchor: "end",
           color: "white",
-          font: {
-            weight: "bold",
-          },
+          font: { weight: "bold" },
           formatter: (value: number, context) => {
             const index = context.dataIndex;
             const log = logs[index];
@@ -221,7 +208,7 @@ export default function LineChart() {
       {modalOpen && selectedLog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div
-            className="bg-sky-900 rounded-md shadow-lg max-w-xl w-full p-4 relative         
+            className="bg-sky-900 rounded-md shadow-lg max-w-xl w-full p-4 relative
             transform transition-all duration-300 ease-out
             opacity-0 scale-100 animate-[popIn_0.3s_ease-out_forwards]"
           >
@@ -234,29 +221,20 @@ export default function LineChart() {
             </button>
 
             <h2 className="text-white text-lg font-semibold mb-4">
-              Video for{" "}
-              {selectedLog.partNumber.split("-").slice(0, 2).join("-")}
+              Video for {selectedLog.partNumber.split("-").slice(0, 2).join("-")}
             </h2>
 
-            {/* <video
+            <video
               controls
               className="w-full rounded-md"
-              src={`/videos/${selectedLog.partNumber}.mp4`}
+              src={`/videos/${selectedLog.filename}.mp4`}
               onError={(e) => {
                 (e.target as HTMLVideoElement).poster =
                   "https://via.placeholder.com/400x225?text=Video+not+found";
               }}
             >
               Your browser does not support the video tag.
-            </video> */}
-            <iframe
-              className="w-full h-64 md:h-96 rounded-md"
-              src={`https://www.youtube.com/embed/2Z0aWl_GIT0`}
-              title="YouTube video"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            ></iframe>
+            </video>
           </div>
         </div>
       )}
