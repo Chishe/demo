@@ -48,16 +48,21 @@ export default function LineChart() {
   const [selectedLog, setSelectedLog] = useState<Log | null>(null);
 
   useEffect(() => {
-    fetch("/api/log")
-      .then((res) => res.json())
-      .then((data: Log[]) => {
-        setLogs(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch logs:", err);
-        setLoading(false);
-      });
+    const fetchLogs = () => {
+      fetch("/api/log")
+        .then((res) => res.json())
+        .then((data: Log[]) => {
+          setLogs(data);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch logs:", err);
+          setLoading(false);
+        });
+    };
+    fetchLogs();
+    const interval = setInterval(fetchLogs, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) {
@@ -201,7 +206,7 @@ export default function LineChart() {
 
   return (
     <>
-      <div className="w-full h-64 md:h-100 bg-gradient-to-b from-blue-950 to-[#20a7db] rounded-sm p-2">
+      <div className="w-full h-full md:h-full bg-[#000053] rounded-sm p-2">
         <Line data={data} options={options} />
       </div>
 
@@ -221,7 +226,8 @@ export default function LineChart() {
             </button>
 
             <h2 className="text-white text-lg font-semibold mb-4">
-              Video for {selectedLog.partNumber.split("-").slice(0, 2).join("-")}
+              Video for{" "}
+              {selectedLog.partNumber.split("-").slice(0, 2).join("-")}
             </h2>
 
             <video

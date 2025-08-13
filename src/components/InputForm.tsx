@@ -49,7 +49,7 @@ export default function InputForm() {
   };
 
   return (
-    <div className="p-4  space-y-4 h-full w-full bg-gradient-to-b from-blue-950 to-[#20a7db] rounded-md shadow-lg border-2 border-amber-50">
+    <div className="p-4  space-y-4 h-full w-full bg-[#000053] rounded-md shadow-lg border-2 border-amber-50">
       <label
         htmlFor="modelInput"
         className="block text-center text-lg font-semibold text-white"

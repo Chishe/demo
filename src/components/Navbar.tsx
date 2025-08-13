@@ -3,7 +3,7 @@ import Image from "next/image";
 
 export default function Navbar() {
   return (
-    <nav className="fixed top-0 left-0 z-50 w-full bg-gradient-to-b from-gray-500 to-white p-4 border-b border-gray-200 shadow-md">
+    <nav className="fixed top-0 left-0 z-50 w-full bg-[#000053] p-4 border-b border-blue-200 shadow-md">
       <div className="w-full mx-auto ml-8 flex items-center space-x-2 justify-start">
         <Image className="" src="/ANIWAT-LOGOS.png" alt="Logo" width={100} height={40} />
         <div className="relative inline-block">

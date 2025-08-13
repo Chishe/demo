@@ -263,7 +263,7 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
               }}
               onFocus={() => setShowFilterDropdown(true)}
               placeholder="พิมพ์เพื่อค้นหา..."
-              className="w-full border rounded px-3 py-2"
+              className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
               autoComplete="off"
             />
           </div>
@@ -289,23 +289,23 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
         </div>
 
         {/* ตารางรายการ Thresholds */}
-        <div className="overflow-x-auto custom-scrollbar max-h-64 mb-6 border rounded">
-          <table className="min-w-full border-collapse border border-gray-300">
+        <div className="overflow-x-auto custom-scrollbar max-h-24 mb-6 border rounded-lg">
+          <table className="min-w-full border-separate border-spacing-0 border border-gray-300 rounded-lg">
             <thead className="bg-gray-100 sticky top-0">
               <tr>
-                <th className="border border-gray-300 px-3 py-2 text-center">
+                <th className="bg-blue-400 px-3 py-2 text-center ">
                   Part Number
                 </th>
-                <th className="border border-gray-300 px-3 py-2 text-center">
+                <th className="bg-blue-400 px-3 py-2 text-center">
                   Standard
                 </th>
-                <th className="border border-gray-300 px-3 py-2 text-center">
+                <th className="bg-blue-400 px-3 py-2 text-center">
                   Limit High
                 </th>
-                <th className="border border-gray-300 px-3 py-2 text-center">
+                <th className="bg-blue-400 px-3 py-2 text-center">
                   Limit Low
                 </th>
-                <th className="border border-gray-300 px-3 py-2 text-center">
+                <th className="bg-blue-400 px-3 py-2 text-center ">
                   Actions
                 </th>
               </tr>
@@ -322,16 +322,16 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
                     setMode("edit");
                   }}
                 >
-                  <td className="border border-gray-300 px-3 py-2">
+                  <td className="border border-gray-300 px-3 py-2 text-center">
                     {t.partNumber}
                   </td>
-                  <td className="border border-gray-300 px-3 py-2">
+                  <td className="border border-gray-300 px-3 py-2 text-center">
                     {t.standard}
                   </td>
-                  <td className="border border-gray-300 px-3 py-2 text-right">
+                  <td className="border border-gray-300 px-3 py-2 text-center">
                     {t.limitHigh}
                   </td>
-                  <td className="border border-gray-300 px-3 py-2 text-right">
+                  <td className="border border-gray-300 px-3 py-2 text-center">
                     {t.limitLow}
                   </td>
                   <td className="border border-gray-300 px-3 py-2 text-center">
@@ -363,75 +363,88 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
         </div>
 
         {/* ฟอร์มเพิ่ม/แก้ไข */}
-        <form onSubmit={handleSubmit} className="max-w-md mx-auto space-y-4">
-          <div>
-            <label className="block font-medium mb-1" htmlFor="partNumber">
-              Part Number
-            </label>
-            <input
-              id="partNumber"
-              type="text"
-              value={partNumber}
-              disabled={mode === "edit"}
-              onChange={(e) => setPartNumber(e.target.value)}
-              className="w-full border rounded px-3 py-2"
-              maxLength={100}
-              required
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="w-full mx-auto space-y-4">
+          <div className="flex gap-4">
+            <div>
+              <label
+                className="block font-medium bg-blue-400 rounded-t-lg text-white  text-center"
+                htmlFor="partNumber"
+              >
+                Part Number
+              </label>
+              <input
+                id="partNumber"
+                type="text"
+                value={partNumber}
+                disabled={mode === "edit"}
+                onChange={(e) => setPartNumber(e.target.value)}
+                className="w-full border rounded-b-lg px-3 py-2 text-center focus:outline-none focus:ring-2 focus:ring-green-400"
+                maxLength={100}
+                required
+              />
+            </div>
 
-          <div>
-            <label className="block font-medium mb-1" htmlFor="standard">
-              Standard
-            </label>
-            <input
-              id="standard"
-              type="text"
-              value={standard}
-              onChange={(e) => setStandard(e.target.value)}
-              className="w-full border rounded px-3 py-2"
-              maxLength={255}
-              required
-            />
-          </div>
+            <div>
+              <label
+                className="block font-medium bg-blue-400 rounded-t-lg text-white  text-center"
+                htmlFor="standard"
+              >
+                Standard
+              </label>
+              <input
+                id="standard"
+                type="text"
+                value={standard}
+                onChange={(e) => setStandard(e.target.value)}
+                className="w-full border rounded-b-lg px-3 py-2 text-center focus:outline-none focus:ring-2 focus:ring-green-400"
+                maxLength={255}
+                required
+              />
+            </div>
 
-          <div>
-            <label className="block font-medium mb-1" htmlFor="limitHigh">
-              Limit High
-            </label>
-            <input
-              id="limitHigh"
-              type="number"
-              value={limitHigh}
-              onChange={(e) => setLimitHigh(parseNumberInput(e.target.value))}
-              className="w-full border rounded px-3 py-2"
-              min={0}
-              required
-            />
-          </div>
+            <div>
+              <label
+                className="block font-medium bg-blue-400 rounded-t-lg text-white  text-center"
+                htmlFor="limitHigh"
+              >
+                Limit High
+              </label>
+              <input
+                id="limitHigh"
+                type="number"
+                value={limitHigh}
+                onChange={(e) => setLimitHigh(parseNumberInput(e.target.value))}
+                className="w-full border rounded-b-lg px-3 py-2 text-center focus:outline-none focus:ring-2 focus:ring-green-400"
+                min={0}
+                required
+              />
+            </div>
 
-          <div>
-            <label className="block font-medium mb-1" htmlFor="limitLow">
-              Limit Low
-            </label>
-            <input
-              id="limitLow"
-              type="number"
-              value={limitLow}
-              onChange={(e) => setLimitLow(parseNumberInput(e.target.value))}
-              className="w-full border rounded px-3 py-2"
-              min={0}
-              required
-            />
+            <div>
+              <label
+                className="block font-medium bg-blue-400 rounded-t-lg text-white  text-center"
+                htmlFor="limitLow"
+              >
+                Limit Low
+              </label>
+              <input
+                id="limitLow"
+                type="number"
+                value={limitLow}
+                onChange={(e) => setLimitLow(parseNumberInput(e.target.value))}
+                className="w-full border rounded-b-lg px-3 py-2 text-center focus:outline-none focus:ring-2 focus:ring-green-400"
+                min={0}
+                required
+              />
+            </div>
           </div>
-
           {error && (
             <div className="text-red-600 font-semibold text-center">
               {error}
             </div>
           )}
 
-          <div className="flex justify-between pt-4 gap-3">
+          <div className="flex justify-center pt-4 gap-3">
             <button
               type="button"
               onClick={handleClose}

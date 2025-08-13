@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { PackageOpen } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -11,132 +10,73 @@ import {
 } from "@/components/ui/card";
 
 interface Log {
+  partNumber: string;
   startTime: string;
   endTime: string;
   ct: string;
   standard: string;
-  unitsProduced: number; 
-  defectiveUnits: number; 
 }
 
 const OeeCards = () => {
   const [logs, setLogs] = useState<Log[]>([]);
   const [loading, setLoading] = useState(true);
-  const [totalUnits, setTotalUnits] = useState<number>(10);
-  const [defectUnits, setDefectUnits] = useState<number>(5);
+  const [planUnits, setPlanUnits] = useState<number>(0);
+  const [defectUnits, setDefectUnits] = useState<number>(0);
   const [data, setData] = useState<number[]>([]);
   const [labels, setLabels] = useState<string[]>([]);
 
+  const totalUnits = logs.length;
+
   useEffect(() => {
-    setLoading(true);
-    axios
-      .get("/api/log")
-      .then((res) => {
-        if (res.data && res.data.length > 0) {
-          setLogs(res.data);
-        } else {
-          setLogs([]);
-        }
-      })
-      .catch(() => {
-        setLogs([]);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    const fetchLogs = () => {
+      setLoading(true);
+      axios
+        .get("/api/log")
+        .then((res) => setLogs(res.data || []))
+        .catch(() => setLogs([]))
+        .finally(() => setLoading(false));
+    };
+    fetchLogs();
+    const interval = setInterval(fetchLogs, 30000);
+    return () => clearInterval(interval);
   }, []);
 
-useEffect(() => {
-  if (!logs || logs.length === 0) return;
+  useEffect(() => {
+    if (!logs || logs.length === 0 || planUnits === 0) return;
 
-  const parseTime = (timeStr: string) => {
-    const timePart = timeStr.split(" ")[1];
-    if (!timePart) return 0;
-    const [h, m, s] = timePart.split(":").map(Number);
-    return h * 3600 + m * 60 + (s || 0);
-  };
+    const totalUnitsProduced = logs.length;
 
-  let totalScheduledSeconds = 0;
-  let weightedAvailability = 0;
-  let weightedPerformance = 0;
+    // เวลาเฉลี่ยต่อชิ้น (CT)
+    const avgCT =
+      logs.reduce((sum, log) => sum + Number(log.ct || 0), 0) / logs.length;
 
-  const qualityAll =
-    totalUnits > 0
-      ? ((totalUnits - defectUnits) / totalUnits) * 100
-      : 0;
+    const plannedTime = planUnits * avgCT;
+    const actualTime = totalUnitsProduced * avgCT;
+    const performance = plannedTime > 0 ? (actualTime / plannedTime) * 100 : 0;
 
-  console.log("Total Units (from input):", totalUnits);
-  console.log("Defect Units (from input):", defectUnits);
-  console.log("Quality:", qualityAll);
+    const quality =
+      totalUnitsProduced > 0
+        ? ((totalUnitsProduced - defectUnits) / totalUnitsProduced) * 100
+        : 0;
 
-  logs.forEach((log) => {
-    const scheduledSeconds =
-      parseTime(log.endTime) - parseTime(log.startTime);
-    const scheduledSecondsPositive =
-      scheduledSeconds > 0 ? scheduledSeconds : 0;
+    const availability = 100;
+    const oee = (availability * performance * quality) / 10000;
 
-    const availability = scheduledSecondsPositive > 0 ? 100 : 0;
+    setData([availability, performance, quality, oee]);
+    setLabels(["Availability", "Performance", "Quality", "OEE"]);
 
-    const actual_speed = Number(log.ct);
-    const design_speed = Number(log.standard);
-    const performanceRaw =
-      design_speed > 0 ? (design_speed / actual_speed) * 100 : 0;
-    const performance = performanceRaw > 100 ? 100 : performanceRaw;
-
-    console.log(`Log ${log.startTime} - ${log.endTime}:`);
-    console.log("  Scheduled seconds:", scheduledSecondsPositive);
-    console.log("  Availability:", availability);
-    console.log("  Actual Speed (ct):", actual_speed);
-    console.log("  Design Speed (standard):", design_speed);
-    console.log("  Performance raw:", performanceRaw);
-    console.log("  Performance capped:", performance);
-
-    totalScheduledSeconds += scheduledSecondsPositive;
-    weightedAvailability += availability * scheduledSecondsPositive;
-    weightedPerformance += performance * scheduledSecondsPositive;
-  });
-
-  const availabilityFinal =
-    totalScheduledSeconds > 0
-      ? weightedAvailability / totalScheduledSeconds
-      : 0;
-  const performanceFinal =
-    totalScheduledSeconds > 0
-      ? weightedPerformance / totalScheduledSeconds
-      : 0;
-  const oeeFinal =
-    (availabilityFinal * performanceFinal * qualityAll) / 10000;
-
-  console.log("Availability (weighted):", availabilityFinal);
-  console.log("Performance (weighted):", performanceFinal);
-  console.log("Quality (overall):", qualityAll);
-  console.log("OEE (final):", oeeFinal);
-
-  setData([availabilityFinal, performanceFinal, qualityAll, oeeFinal]);
-  setLabels(["Availability", "Performance", "Quality", "OEE"]);
-}, [JSON.stringify(logs), totalUnits, defectUnits]);
-
-
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full mt-20">
-        <div className="flex gap-4 justify-center items-center">
-          <div className="w-4 h-4 rounded-full animate-bounce bg-blue-500" />
-          <div className="w-4 h-4 rounded-full animate-bounce bg-blue-500 delay-100" />
-          <div className="w-4 h-4 rounded-full animate-bounce bg-blue-500 delay-200" />
-        </div>
-        <p className="text-sky-500 mt-2 text-sm">Loading data...</p>
-      </div>
-    );
-  }
-
-  if (!logs || logs.length === 0)
-    return (
-      <div className="flex flex-col items-center justify-center gap-2 bg-gray-300 w-full h-full">
-        <PackageOpen className="w-12 h-12 text-sky-500" />
-        <span className="text-sky-400">No data available</span>
-      </div>
-    );
+    console.log("===== OEE Calculation =====");
+    console.log("Plan Units:", planUnits);
+    console.log("Total Units Produced:", totalUnitsProduced);
+    console.log("Average CT:", avgCT);
+    console.log("Planned Time:", plannedTime);
+    console.log("Actual Time:", actualTime);
+    console.log("Performance %:", performance.toFixed(2));
+    console.log("Quality %:", quality.toFixed(2));
+    console.log("Availability %:", availability);
+    console.log("OEE %:", oee.toFixed(2));
+    console.log("===========================");
+  }, [logs.length, defectUnits, planUnits]); // ✅ แก้ตรงนี้
 
   const colors = [
     ["#22c55e", "#16a34a"],
@@ -146,7 +86,7 @@ useEffect(() => {
   ];
 
   return (
-    <div className="w-full h-full p-4 bg-gradient-to-b from-blue-950 to-[#20a7db] rounded-md shadow-lg border-2 border-amber-50">
+    <div className="w-full h-full p-4 bg-[#000053] rounded-md shadow-lg border-2 border-amber-50">
       <form
         onSubmit={(e) => e.preventDefault()}
         className="pt-4 px-2 mb-5 flex flex-col sm:flex-row sm:justify-center gap-4"
@@ -155,18 +95,15 @@ useEffect(() => {
           <input
             type="number"
             min={0}
-            value={totalUnits}
-            onChange={(e) =>
-              setTotalUnits(Math.max(0, Number(e.target.value) || 0))
-            }
-            className="peer block w-full rounded-md border px-2 pt-4 pb-2 text-sm bg-white"
-            placeholder="Units Produced"
+            value={planUnits}
+            onChange={(e) => setPlanUnits(Number(e.target.value) || 0)}
+            className="peer block w-full rounded-md border px-2 pt-4 pb-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-400"
+            placeholder="Plan Units"
           />
           <label className="absolute left-3 top-2 text-xs text-slate-500">
-            Units Produced
+            Plan Units
           </label>
         </div>
-
         <div className="w-full relative">
           <input
             type="number"
@@ -178,7 +115,7 @@ useEffect(() => {
               if (val > totalUnits) val = totalUnits;
               setDefectUnits(val);
             }}
-            className="peer block w-full rounded-md border px-2 pt-4 pb-2 text-sm bg-white"
+            className="peer block w-full rounded-md border px-2 pt-4 pb-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-400"
             placeholder="Defective Units"
           />
           <label className="absolute left-3 top-2 text-xs text-slate-500">
@@ -187,6 +124,7 @@ useEffect(() => {
         </div>
       </form>
 
+      {/* Cards แสดง OEE */}
       <div className="flex flex-col gap-6">
         {labels.map((label, i) => {
           const value = data[i] ?? 0;

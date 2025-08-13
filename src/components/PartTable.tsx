@@ -31,20 +31,41 @@ export default function PartTable() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    fetch("/api/log")
-      .then((res) => res.json())
-      .then((data) => {
-        setData(data);
-        setLoading(false);
-      });
+    const fetchData = () => {
+      fetch("/api/log")
+        .then((res) => res.json())
+        .then((data) => {
+          setData(data);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch logs:", err);
+          setLoading(false);
+        });
+    };
+
+    fetchData();
+
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
   }, []);
 
-  // ===== Excel Export =====
+  const getTimestamp = () => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    const hh = String(now.getHours()).padStart(2, "0");
+    const min = String(now.getMinutes()).padStart(2, "0");
+    const ss = String(now.getSeconds()).padStart(2, "0");
+    return `${yyyy}${mm}${dd}_${hh}${min}${ss}`;
+  };
+
   const exportExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Logs");
-    XLSX.writeFile(workbook, "logs.xlsx");
+    XLSX.writeFile(workbook, `RAW_DATA_${getTimestamp()}.xlsx`);
   };
 
   const exportPDF = async () => {
@@ -52,7 +73,7 @@ export default function PartTable() {
     const autoTable = (await import("jspdf-autotable")).default;
 
     const doc = new jsPDF();
-    doc.text("Logs", 14, 10);
+    doc.text(`RAW DATA: ${new Date().toLocaleString()}`, 14, 10);
 
     const tableColumn = [
       "No",
@@ -81,12 +102,12 @@ export default function PartTable() {
       startY: 20,
     });
 
-    doc.save("logs.pdf");
+    doc.save(`RAW_DATA_${getTimestamp()}.pdf`);
   };
 
   return (
-    <div className="overflow-x-auto custom-scrollbar rounded-lg shadow-md w-full h-full bg-sky-700">
-      <div className="flex gap-2 p-2 bg-sky-800">
+    <div className="overflow-x-auto custom-scrollbar rounded-lg shadow-md w-full h-full bg-[#000053]">
+      <div className="flex gap-2 p-2 bg-[#000053]">
         <button
           onClick={exportExcel}
           className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded"
@@ -108,34 +129,34 @@ export default function PartTable() {
         <ThresholdModal isOpen={open} onClose={() => setOpen(false)} />
       </div>
 
-      <table className="min-w-full table-auto border border-sky-700 text-sm text-black bg-white ">
-        <thead className="bg-[#1c96c5] text-xs uppercase sticky top-0 z-10">
+      <table className="min-w-full table-auto border border-[#000053] text-sm text-black bg-white ">
+        <thead className="bg-[#000053] text-xs uppercase sticky top-0 z-10 text-white">
           <tr>
-            <th className="px-4 py-2 border border-[#20a7db] text-center">
+            <th className="px-4 py-2 border border-[#1c1c84] text-center">
               No
             </th>
-            <th className="px-4 py-2 border border-[#20a7db] text-center">
+            <th className="px-4 py-2 border border-[#1c1c84] text-center">
               Part Number
             </th>
-            <th className="px-4 py-2 border border-[#20a7db] text-center">
+            <th className="px-4 py-2 border border-[#1c1c84] text-center">
               Start Time
             </th>
-            <th className="px-4 py-2 border border-[#20a7db] text-center">
+            <th className="px-4 py-2 border border-[#1c1c84] text-center">
               End Time
             </th>
-            <th className="px-4 py-2 border border-[#20a7db] text-center">
+            <th className="px-4 py-2 border border-[#1c1c84] text-center">
               CT (sec)
             </th>
-            <th className="px-4 py-2 border border-[#20a7db] text-center">
+            <th className="px-4 py-2 border border-[#1c1c84] text-center">
               Standard
             </th>
-            <th className="px-4 py-2 border border-[#20a7db] text-center">
+            <th className="px-4 py-2 border border-[#1c1c84] text-center">
               Limit High
             </th>
-            <th className="px-4 py-2 border border-[#20a7db] text-center">
+            <th className="px-4 py-2 border border-[#1c1c84] text-center">
               Limit Low
             </th>
-            <th className="px-4 py-2 border border-[#20a7db] text-center">
+            <th className="px-4 py-2 border border-[#1c1c84] text-center">
               Action
             </th>
           </tr>

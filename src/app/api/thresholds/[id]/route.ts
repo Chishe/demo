@@ -3,14 +3,16 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-  const id = Number(params.id);
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> } 
+) {
+  const id = Number((await params).id);
   if (isNaN(id)) {
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
 
-  const data = await request.json();
-  const { standard, limitHigh, limitLow } = data;
+  const { standard, limitHigh, limitLow } = await request.json();
 
   if (
     !standard ||
@@ -29,16 +31,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       data: { standard, limitHigh, limitLow },
     });
     return NextResponse.json(updated);
-  } catch (error: any) {
+  } catch {
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> } 
 ) {
-  const id = Number(params.id);
+  const id = Number((await params).id); 
   if (isNaN(id)) {
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
@@ -46,7 +48,7 @@ export async function DELETE(
   try {
     await prisma.thresholds.delete({ where: { id } });
     return NextResponse.json({ message: "Deleted" });
-  } catch (error: any) {
+  } catch {
     return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   }
 }
