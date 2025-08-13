@@ -15,10 +15,12 @@ interface Log {
   endTime: string;
   ct: string;
   standard: string;
+  unitsProduced: number; 
+  defectiveUnits: number; 
 }
 
 const OeeCards = () => {
-  const [log, setLog] = useState<Log | null>(null);
+  const [logs, setLogs] = useState<Log[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalUnits, setTotalUnits] = useState<number>(10);
   const [defectUnits, setDefectUnits] = useState<number>(5);
@@ -31,13 +33,13 @@ const OeeCards = () => {
       .get("/api/log")
       .then((res) => {
         if (res.data && res.data.length > 0) {
-          setLog(res.data[0]);
+          setLogs(res.data);
         } else {
-          setLog(null);
+          setLogs([]);
         }
       })
       .catch(() => {
-        setLog(null);
+        setLogs([]);
       })
       .finally(() => {
         setLoading(false);
@@ -45,7 +47,7 @@ const OeeCards = () => {
   }, []);
 
 useEffect(() => {
-  if (!log) return;
+  if (!logs || logs.length === 0) return;
 
   const parseTime = (timeStr: string) => {
     const timePart = timeStr.split(" ")[1];
@@ -54,35 +56,65 @@ useEffect(() => {
     return h * 3600 + m * 60 + (s || 0);
   };
 
-  const scheduled_time_seconds = parseTime(log.endTime) - parseTime(log.startTime);
-  const operating_time_seconds = scheduled_time_seconds > 0 ? scheduled_time_seconds : 0;
+  let totalScheduledSeconds = 0;
+  let weightedAvailability = 0;
+  let weightedPerformance = 0;
 
-  const scheduled_time = operating_time_seconds / 60;
-  const operating_time = scheduled_time;
+  const qualityAll =
+    totalUnits > 0
+      ? ((totalUnits - defectUnits) / totalUnits) * 100
+      : 0;
 
-  const actual_speed = Number(log.ct);
-  const design_speed = Number(log.standard);
+  console.log("Total Units (from input):", totalUnits);
+  console.log("Defect Units (from input):", defectUnits);
+  console.log("Quality:", qualityAll);
 
-  const availability =
-    scheduled_time > 0 ? (operating_time / scheduled_time) * 100 : 0;
-  const performance =
-    design_speed > 0 ? (actual_speed / design_speed) * 100 : 0;
-  const quality =
-    totalUnits > 0 ? ((totalUnits - defectUnits) / totalUnits) * 100 : 0;
-  const oee = (availability * performance * quality) / 10000;
+  logs.forEach((log) => {
+    const scheduledSeconds =
+      parseTime(log.endTime) - parseTime(log.startTime);
+    const scheduledSecondsPositive =
+      scheduledSeconds > 0 ? scheduledSeconds : 0;
 
-  console.log("scheduled_time (min):", scheduled_time);
-  console.log("operating_time (min):", operating_time);
-  console.log("actual_speed (ct):", actual_speed);
-  console.log("design_speed (standard):", design_speed);
-  console.log("availability:", availability);
-  console.log("performance:", performance);
-  console.log("quality:", quality);
-  console.log("OEE:", oee);
+    const availability = scheduledSecondsPositive > 0 ? 100 : 0;
 
-  setData([availability, performance, quality, oee]);
+    const actual_speed = Number(log.ct);
+    const design_speed = Number(log.standard);
+    const performanceRaw =
+      design_speed > 0 ? (design_speed / actual_speed) * 100 : 0;
+    const performance = performanceRaw > 100 ? 100 : performanceRaw;
+
+    console.log(`Log ${log.startTime} - ${log.endTime}:`);
+    console.log("  Scheduled seconds:", scheduledSecondsPositive);
+    console.log("  Availability:", availability);
+    console.log("  Actual Speed (ct):", actual_speed);
+    console.log("  Design Speed (standard):", design_speed);
+    console.log("  Performance raw:", performanceRaw);
+    console.log("  Performance capped:", performance);
+
+    totalScheduledSeconds += scheduledSecondsPositive;
+    weightedAvailability += availability * scheduledSecondsPositive;
+    weightedPerformance += performance * scheduledSecondsPositive;
+  });
+
+  const availabilityFinal =
+    totalScheduledSeconds > 0
+      ? weightedAvailability / totalScheduledSeconds
+      : 0;
+  const performanceFinal =
+    totalScheduledSeconds > 0
+      ? weightedPerformance / totalScheduledSeconds
+      : 0;
+  const oeeFinal =
+    (availabilityFinal * performanceFinal * qualityAll) / 10000;
+
+  console.log("Availability (weighted):", availabilityFinal);
+  console.log("Performance (weighted):", performanceFinal);
+  console.log("Quality (overall):", qualityAll);
+  console.log("OEE (final):", oeeFinal);
+
+  setData([availabilityFinal, performanceFinal, qualityAll, oeeFinal]);
   setLabels(["Availability", "Performance", "Quality", "OEE"]);
-}, [log, totalUnits, defectUnits]);
+}, [JSON.stringify(logs), totalUnits, defectUnits]);
 
 
   if (loading) {
@@ -98,7 +130,7 @@ useEffect(() => {
     );
   }
 
-  if (!log)
+  if (!logs || logs.length === 0)
     return (
       <div className="flex flex-col items-center justify-center gap-2 bg-gray-300 w-full h-full">
         <PackageOpen className="w-12 h-12 text-sky-500" />
