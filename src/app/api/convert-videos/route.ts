@@ -5,7 +5,13 @@ import { NextResponse } from "next/server";
 
 const videosDir = "C:/Users/HOME/Documents/evision-app/public/videos/";
 
-export async function POST() {
+export async function POST(req: Request) {
+
+  const apiKey = req.headers.get("SAKUMPOA");
+  if (apiKey !== process.env.API_KEY) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     if (!fs.existsSync(videosDir)) {
       return NextResponse.json(
@@ -31,7 +37,7 @@ export async function POST() {
 
             exec(cmd, (err, stdout, stderr) => {
               if (!err) {
-                fs.unlinkSync(input);
+                fs.unlinkSync(input); 
                 converted.push(file);
                 resolve();
               } else {

@@ -16,6 +16,7 @@ import {
 import { Line } from "react-chartjs-2";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 import { PackageOpen } from "lucide-react";
+import { logEvent } from "@/lib/client-log";
 
 ChartJS.register(
   CategoryScale,
@@ -41,29 +42,44 @@ type Log = {
   created_at: string;
 };
 
-export default function LineChart() {
+interface LineChartProps {
+  userId: number;
+  userIp: string;
+}
+
+export default function LineChart({ userId, userIp }: LineChartProps) {
   const [logs, setLogs] = useState<Log[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<Log | null>(null);
+  console.log("userId:", userId);
+  console.log("userIp:", userIp);
 
-  useEffect(() => {
-    const fetchLogs = () => {
-      fetch("/api/log")
-        .then((res) => res.json())
-        .then((data: Log[]) => {
-          setLogs(data);
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error("Failed to fetch logs:", err);
-          setLoading(false);
-        });
-    };
-    fetchLogs();
-    const interval = setInterval(fetchLogs, 30000);
-    return () => clearInterval(interval);
-  }, []);
+useEffect(() => {
+  const fetchLogs = async () => {
+    try {
+      const res = await fetch("/api/log", {
+        headers: { SAKUMPOA: process.env.NEXT_PUBLIC_API_KEY || "" },
+      });
+
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+      const data: Log[] = await res.json();
+      setLogs(data);
+    } catch (err) {
+      console.error("Failed to fetch logs:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchLogs();
+
+  // If you want polling:
+  // const interval = setInterval(fetchLogs, 1000);
+  // return () => clearInterval(interval);
+}, []);
+
 
   if (loading) {
     return (
@@ -103,7 +119,7 @@ export default function LineChart() {
     const ct = Number(log.ct);
     if (ct < log.limitLow) return "yellow";
     if (ct > log.limitHigh) return "red";
-    return "rgb(59 130 246)"; // น้ำเงิน
+    return "rgb(59 130 246)";
   });
 
   const data: ChartData<"line"> = {
@@ -199,8 +215,21 @@ export default function LineChart() {
     onClick: (event, elements) => {
       if (!elements.length) return;
       const elementIndex = elements[0].index;
+      const log = logs[elementIndex];
       setSelectedLog(logs[elementIndex]);
       setModalOpen(true);
+
+      logEvent(
+        userId,
+        "line_chart_point_click",
+        "click",
+        {
+          partNumber: log.partNumber,
+          ct: log.ct,
+          index: elementIndex,
+        },
+        userIp
+      );
     },
   };
 
@@ -218,7 +247,16 @@ export default function LineChart() {
             opacity-0 scale-100 animate-[popIn_0.3s_ease-out_forwards]"
           >
             <button
-              onClick={() => setModalOpen(false)}
+              onClick={() => {
+                setModalOpen(false);
+                logEvent(
+                  userId,
+                  "line_chart_modal_close",
+                  "click",
+                  { partNumber: selectedLog?.partNumber },
+                  userIp
+                );
+              }}
               className="absolute top-2 right-2 text-white text-xl font-bold hover:text-red-500"
               aria-label="Close modal"
             >

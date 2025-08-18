@@ -1,40 +1,28 @@
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient } = require("@prisma/client");
+const bcrypt = require("bcryptjs");
+
 const prisma = new PrismaClient();
 
-function formatDate(date: Date): string {
-  const pad = (n: number): string => n.toString().padStart(2, '0');
-  return [
-    pad(date.getDate()),
-    pad(date.getMonth() + 1),
-    date.getFullYear().toString().slice(2),
-    pad(date.getHours()),
-    pad(date.getMinutes()),
-    pad(date.getSeconds()),
-  ].join('/');
-}
-
-
 async function main() {
-  for (let i = 1; i <= 10; i++) {
-    const now = new Date();
-    const timestamp = formatDate(now);
-    const partNumber = `TG446610-${i.toString().padStart(4, '0')}-${timestamp}`;
+  await prisma.user.deleteMany();
 
-    await prisma.log.create({
-      data: {
-        partNumber,
-        startTime: '08:00',
-        endTime: '17:00',
-        ct: '650',
-        standard: '600',
-        limitHigh: 1000,
-        limitLow: 500,
-      },
-    });
+  const users = [
+    { username: "admin01", password: await bcrypt.hash("admin123", 10), firstname: "System", lastname: "Admin", level: "ADMIN" },
+    { username: "manager01", password: await bcrypt.hash("manager123", 10), firstname: "Somchai", lastname: "Manager", level: "MANAGER" },
+    { username: "executive01", password: await bcrypt.hash("executive123", 10), firstname: "Suda", lastname: "Executive", level: "EXECUTIVE" },
+    { username: "user01", password: await bcrypt.hash("user123", 10), firstname: "Anan", lastname: "User", level: "USER" },
+  ];
+
+  for (const u of users) {
+    await prisma.user.create({ data: u });
+    console.log(`👤 Created user: ${u.username} [${u.level}]`);
   }
-  console.log('Seeded 10 logs with timestamp!');
+
+  console.log("✅ Seeding complete!");
 }
 
 main()
   .catch(console.error)
-  .finally(() => prisma.$disconnect());
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

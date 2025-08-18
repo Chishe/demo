@@ -9,6 +9,13 @@ import ThresholdModal from "@/components/ThresholdModal";
 import { RiFileExcel2Line } from "react-icons/ri";
 import { FaRegFilePdf } from "react-icons/fa6";
 import { MdOutlineDataThresholding } from "react-icons/md";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { logEvent } from "@/lib/client-log";
 
 type Log = {
   id: number;
@@ -22,33 +29,42 @@ type Log = {
   filename: string;
   created_at: string;
 };
-
-export default function PartTable() {
+interface PartTableProps {
+  userId: number;
+  userIp: string;
+}
+export default function PartTable({ userId, userIp }: PartTableProps) {
   const [data, setData] = useState<Log[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<Log | null>(null);
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    const fetchData = () => {
-      fetch("/api/log")
-        .then((res) => res.json())
-        .then((data) => {
-          setData(data);
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error("Failed to fetch logs:", err);
-          setLoading(false);
-        });
-    };
+useEffect(() => {
+  const fetchLogs = async () => {
+    try {
+      const res = await fetch("/api/log", {
+        headers: { SAKUMPOA: process.env.NEXT_PUBLIC_API_KEY || "" },
+      });
 
-    fetchData();
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
-  }, []);
+      const data: Log[] = await res.json();
+      setData(data);
+    } catch (err) {
+      console.error("Failed to fetch logs:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchLogs();
+
+  // If you want polling:
+  // const interval = setInterval(fetchLogs, 1000);
+  // return () => clearInterval(interval);
+}, []);
+
 
   const getTimestamp = () => {
     const now = new Date();
@@ -109,24 +125,75 @@ export default function PartTable() {
     <div className="overflow-x-auto custom-scrollbar rounded-lg shadow-md w-full h-full bg-[#000053]">
       <div className="flex gap-2 p-2 bg-[#000053]">
         <button
-          onClick={exportExcel}
+          onClick={() => {
+            exportExcel();
+            logEvent(
+              userId,
+              "export_excel",
+              "click",
+              { rowCount: data.length },
+              userIp
+            );
+          }}
           className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded"
         >
           <RiFileExcel2Line className="w-8 h-8" />
         </button>
         <button
-          onClick={exportPDF}
+          onClick={async () => {
+            await exportPDF();
+            logEvent(
+              userId,
+              "export_pdf",
+              "click",
+              { rowCount: data.length },
+              userIp
+            );
+          }}
           className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded"
         >
           <FaRegFilePdf className="w-8 h-8" />
         </button>
-        <button
-          onClick={() => setOpen(true)}
-          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded"
-        >
-          <MdOutlineDataThresholding className="w-8 h-8" />
-        </button>
-        <ThresholdModal isOpen={open} onClose={() => setOpen(false)} />
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => {
+                  if (userId === 1 || userId === 2 || userId === 3) {
+                    setOpen(true);
+                    logEvent(
+                      userId,
+                      "threshold_modal_open",
+                      "click",
+                      {},
+                      userIp
+                    );
+                  }
+                }}
+                className={`px-3 py-1 rounded ${
+                  userId === 1 || userId === 2 || userId === 3
+                    ? "bg-blue-600 hover:bg-blue-700 text-white"
+                    : "bg-blue-300 text-white opacity-50 cursor-not-allowed"
+                }`}
+              >
+                <MdOutlineDataThresholding className="w-8 h-8" />
+              </button>
+            </TooltipTrigger>
+            {userId === 4 && (
+              <TooltipContent>
+                ต้องใช้บัญชีที่มีสิทธิ์ MANAGER หรือ EXECUTIVE ขึ้นไป
+              </TooltipContent>
+            )}
+          </Tooltip>
+
+          {/* Modal */}
+          <ThresholdModal
+            isOpen={open}
+            onClose={() => setOpen(false)}
+            userId={userId}
+            userIp={userIp}
+          />
+        </TooltipProvider>
       </div>
 
       <table className="min-w-full table-auto border border-[#000053] text-sm text-black bg-white ">
@@ -234,6 +301,13 @@ export default function PartTable() {
                       onClick={() => {
                         setSelectedLog(item);
                         setModalOpen(true);
+                        logEvent(
+                          userId,
+                          "video_modal_open",
+                          "click",
+                          { partNumber: item.partNumber },
+                          userIp
+                        );
                       }}
                     >
                       <CirclePlay />
@@ -254,7 +328,16 @@ export default function PartTable() {
             opacity-0 scale-100 animate-[popIn_0.3s_ease-out_forwards]"
           >
             <button
-              onClick={() => setModalOpen(false)}
+              onClick={() => {
+                setModalOpen(false);
+                logEvent(
+                  userId,
+                  "video_modal_close",
+                  "click",
+                  { partNumber: selectedLog.partNumber },
+                  userIp
+                );
+              }}
               className="absolute top-2 right-2 text-white text-xl font-bold hover:text-red-500"
             >
               &times;

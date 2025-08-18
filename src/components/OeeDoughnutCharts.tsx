@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardFooter,
 } from "@/components/ui/card";
+import { logEvent } from "@/lib/client-log";
 
 interface Log {
   partNumber: string;
@@ -17,7 +18,12 @@ interface Log {
   standard: string;
 }
 
-const OeeCards = () => {
+interface OeeCardsProps {
+  userId: number;
+  userIp: string;
+}
+
+const OeeCards = ({ userId, userIp }: OeeCardsProps) => {
   const [logs, setLogs] = useState<Log[]>([]);
   const [loading, setLoading] = useState(true);
   const [planUnits, setPlanUnits] = useState<number>(0);
@@ -37,16 +43,12 @@ const OeeCards = () => {
         .finally(() => setLoading(false));
     };
     fetchLogs();
-    const interval = setInterval(fetchLogs, 30000);
-    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     if (!logs || logs.length === 0 || planUnits === 0) return;
 
     const totalUnitsProduced = logs.length;
-
-    // เวลาเฉลี่ยต่อชิ้น (CT)
     const avgCT =
       logs.reduce((sum, log) => sum + Number(log.ct || 0), 0) / logs.length;
 
@@ -64,19 +66,7 @@ const OeeCards = () => {
 
     setData([availability, performance, quality, oee]);
     setLabels(["Availability", "Performance", "Quality", "OEE"]);
-
-    console.log("===== OEE Calculation =====");
-    console.log("Plan Units:", planUnits);
-    console.log("Total Units Produced:", totalUnitsProduced);
-    console.log("Average CT:", avgCT);
-    console.log("Planned Time:", plannedTime);
-    console.log("Actual Time:", actualTime);
-    console.log("Performance %:", performance.toFixed(2));
-    console.log("Quality %:", quality.toFixed(2));
-    console.log("Availability %:", availability);
-    console.log("OEE %:", oee.toFixed(2));
-    console.log("===========================");
-  }, [logs.length, defectUnits, planUnits]); // ✅ แก้ตรงนี้
+  }, [logs.length, defectUnits, planUnits]);
 
   const colors = [
     ["#22c55e", "#16a34a"],
@@ -96,7 +86,11 @@ const OeeCards = () => {
             type="number"
             min={0}
             value={planUnits}
-            onChange={(e) => setPlanUnits(Number(e.target.value) || 0)}
+            onChange={(e) => {
+              const value = Number(e.target.value) || 0;
+              setPlanUnits(value);
+              logEvent(userId, "plan_units_change", "input", { value }, userIp);
+            }}
             className="peer block w-full rounded-md border px-2 pt-4 pb-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-400"
             placeholder="Plan Units"
           />
@@ -114,6 +108,15 @@ const OeeCards = () => {
               let val = Number(e.target.value) || 0;
               if (val > totalUnits) val = totalUnits;
               setDefectUnits(val);
+              logEvent(
+                userId,
+                "defect_units_change",
+                "input",
+                {
+                  value: val,
+                },
+                userIp
+              );
             }}
             className="peer block w-full rounded-md border px-2 pt-4 pb-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-400"
             placeholder="Defective Units"
@@ -124,7 +127,6 @@ const OeeCards = () => {
         </div>
       </form>
 
-      {/* Cards แสดง OEE */}
       <div className="flex flex-col gap-6">
         {labels.map((label, i) => {
           const value = data[i] ?? 0;

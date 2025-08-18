@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { FilePlus2, RotateCcw, FilePenLine, Trash } from "lucide-react";
 import toast from "react-hot-toast";
+import { logEvent } from "@/lib/client-log";
 
 type Threshold = {
   id: number;
@@ -17,9 +18,16 @@ type Mode = "add" | "edit";
 type Props = {
   isOpen: boolean;
   onClose: () => void;
+  userId: number;
+  userIp: string;
 };
 
-export default function ThresholdModal({ isOpen, onClose }: Props) {
+export default function ThresholdModal({
+  isOpen,
+  onClose,
+  userId,
+  userIp,
+}: Props) {
   const [thresholds, setThresholds] = useState<Threshold[]>([]);
   const [mode, setMode] = useState<Mode>("add");
   const [selected, setSelected] = useState<Threshold | null>(null);
@@ -31,11 +39,9 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Delete confirm modal state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  // Dropdown search filter ตาราง
   const [availablePartNumbers, setAvailablePartNumbers] = useState<string[]>(
     []
   );
@@ -48,6 +54,7 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
 
   useEffect(() => {
     if (isOpen) {
+      logEvent(userId, "threshold_modal_open", "open", {}, userIp);
       fetchThresholds();
       resetForm();
       resetFilter();
@@ -104,17 +111,23 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
     setFilterPartNumberSelected(null);
   }
 
-  async function fetchThresholds() {
-    try {
-      const res = await fetch("/api/thresholds");
-      if (res.ok) {
-        const data = await res.json();
-        setThresholds(data);
-      }
-    } catch {
-      // silent fail
+async function fetchThresholds() {
+  try {
+    const res = await fetch("/api/thresholds", {
+      headers: { SAKUMPOA: process.env.NEXT_PUBLIC_API_KEY || "" },
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
     }
+
+    const data = await res.json();
+    setThresholds(data);
+  } catch (err) {
+    console.error("Failed to fetch thresholds:", err);
   }
+}
+
 
   function parseNumberInput(value: string): number | "" {
     return value === "" ? "" : Number(value);
@@ -150,15 +163,29 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
       if (mode === "add") {
         res = await fetch("/api/thresholds", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+         headers: { SAKUMPOA: process.env.NEXT_PUBLIC_API_KEY || "" },
           body: JSON.stringify(body),
         });
+        logEvent(
+          userId,
+          "threshold_add",
+          "submit",
+          { partNumber, standard, limitHigh, limitLow },
+          userIp
+        );
       } else if (mode === "edit" && selected?.id) {
         res = await fetch(`/api/thresholds/${selected.id}`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: { SAKUMPOA: process.env.NEXT_PUBLIC_API_KEY || "" },
           body: JSON.stringify(body),
         });
+        logEvent(
+          userId,
+          "threshold_edit",
+          "submit",
+          { id: selected.id, partNumber, standard, limitHigh, limitLow },
+          userIp
+        );
       } else {
         throw new Error("Invalid operation");
       }
@@ -181,50 +208,59 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
   }
 
   async function handleDelete(id: number) {
-    setShowDeleteConfirm(false);
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/thresholds/${id}`, {
-        method: "DELETE",
-      });
+  setShowDeleteConfirm(false);
+  setLoading(true);
+  setError(null);
 
-      if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json?.error || "ลบข้อมูลล้มเหลว");
-      }
+  try {
+    const res = await fetch(`/api/thresholds/${id}`, {
+      method: "DELETE",
+      headers: { SAKUMPOA: process.env.NEXT_PUBLIC_API_KEY || "" },
+    });
 
-      await fetchThresholds();
-      resetForm();
-      resetFilter();
-      toast.success("ลบข้อมูลเรียบร้อยแล้ว");
-    } catch (err: any) {
-      setError(err.message || "เกิดข้อผิดพลาด");
-      toast.error(err.message || "เกิดข้อผิดพลาด");
-    } finally {
-      setLoading(false);
+    if (!res.ok) {
+      const json = await res.json();
+      throw new Error(json?.error || "ลบข้อมูลล้มเหลว");
     }
+
+    logEvent(userId, "threshold_delete", "click", { id }, userIp);
+    await fetchThresholds();
+    resetForm();
+    resetFilter();
+    toast.success("ลบข้อมูลเรียบร้อยแล้ว");
+  } catch (err: any) {
+    setError(err.message || "เกิดข้อผิดพลาด");
+    toast.error(err.message || "เกิดข้อผิดพลาด");
+  } finally {
+    setLoading(false);
   }
+}
+
 
   const handleClose = () => {
+    logEvent(userId, "threshold_modal_close", "close", {}, userIp);
     resetForm();
     resetFilter();
     onClose();
   };
 
-  // ฟังก์ชันเลือก filter partNumber
   function handleSelectFilterPartNumber(pn: string | null) {
     setFilterPartNumberSelected(pn);
     setFilterPartNumberSearch(pn || "");
     setShowFilterDropdown(false);
+    logEvent(
+      userId,
+      "threshold_filter_select",
+      "select",
+      { partNumber: pn },
+      userIp
+    );
   }
 
-  // กรอง partNumber dropdown ใน filter ตาม search
   const filteredFilterPartNumbers = availablePartNumbers.filter((pn) =>
     pn.toLowerCase().includes(filterPartNumberSearch.toLowerCase())
   );
 
-  // กรอง thresholds ในตารางตาม filter
   const displayedThresholds =
     filterPartNumberSelected && filterPartNumberSelected.length > 0
       ? thresholds.filter((t) => t.partNumber === filterPartNumberSelected)
@@ -248,7 +284,6 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
         </h2>
         <hr></hr>
         <br></br>
-        {/* Dropdown Search Filter Part Number */}
         <div className="mb-4 w-124 relative" ref={filterDropdownRef}>
           <label className="block font-medium mb-1">
             ค้นหา Part Number (Filter ตาราง)
@@ -288,7 +323,6 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
           )}
         </div>
 
-        {/* ตารางรายการ Thresholds */}
         <div className="overflow-x-auto custom-scrollbar max-h-24 mb-6 border rounded-lg">
           <table className="min-w-full border-separate border-spacing-0 border border-gray-300 rounded-lg">
             <thead className="bg-gray-100 sticky top-0">
@@ -296,18 +330,12 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
                 <th className="bg-blue-400 px-3 py-2 text-center ">
                   Part Number
                 </th>
-                <th className="bg-blue-400 px-3 py-2 text-center">
-                  Standard
-                </th>
+                <th className="bg-blue-400 px-3 py-2 text-center">Standard</th>
                 <th className="bg-blue-400 px-3 py-2 text-center">
                   Limit High
                 </th>
-                <th className="bg-blue-400 px-3 py-2 text-center">
-                  Limit Low
-                </th>
-                <th className="bg-blue-400 px-3 py-2 text-center ">
-                  Actions
-                </th>
+                <th className="bg-blue-400 px-3 py-2 text-center">Limit Low</th>
+                <th className="bg-blue-400 px-3 py-2 text-center ">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -362,7 +390,6 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
           </table>
         </div>
 
-        {/* ฟอร์มเพิ่ม/แก้ไข */}
         <form onSubmit={handleSubmit} className="w-full mx-auto space-y-4">
           <div className="flex gap-4">
             <div>
@@ -455,7 +482,10 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
             </button>
             <button
               type="button"
-              onClick={resetForm}
+              onClick={() => {
+                resetForm();
+                logEvent(userId, "threshold_reset_form", "click", {}, userIp);
+              }}
               disabled={loading}
               className="bg-blue-400 hover:bg-blue-500 text-white px-4 py-2 rounded"
             >
@@ -508,7 +538,6 @@ export default function ThresholdModal({ isOpen, onClose }: Props) {
           </div>
         </form>
 
-        {/* Delete Confirmation Modal (แสดงทีเดียว) */}
         {showDeleteConfirm && deleteId !== null && (
           <div
             className="fixed inset-0 flex justify-center items-center z-50 bg-transparent backdrop-blur-md transform transition-all duration-300 ease-out
